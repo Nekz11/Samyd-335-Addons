@@ -73,20 +73,34 @@ function ns:ProfileExists(name)
     return name and self.global.profiles[name] ~= nil
 end
 
--- Switch the active profile for this character (queued while in combat)
-function ns:SetProfile(name, announce)
+-- The profile the player picked himself (automatic switching returns to it)
+function ns:ManualProfileName()
+    local name = self.global.profileKeys[self.PlayerKey()]
+    if name and self:ProfileExists(name) then return name end
+    return self:ActiveProfileName()
+end
+
+-- Switch the active profile for this character (queued while in combat).
+-- auto = true: temporary switch by group type, the manual choice is kept.
+function ns:SetProfile(name, announce, auto)
     name = self.Trim(name)
     if not self:ProfileExists(name) then
         if announce then self:Print("No profile named '" .. name .. "'.") end
         return false
     end
+    if not auto then self.global.profileKeys[self.PlayerKey()] = name end
     if name == self.activeProfile then return true end
     self:AfterCombat("profile", function()
         ns.activeProfile = name
-        ns.global.profileKeys[ns.PlayerKey()] = name
         ns.db = ns.global.profiles[name]
         ns:ApplyProfile()
-        if announce then ns:Print("Profile |cffffffff" .. name .. "|r activated.") end
+        if announce then
+            if auto then
+                ns:Print("Profile |cffffffff" .. name .. "|r activated automatically (" .. (ns.GroupTypeLabels[ns.groupType] or ns.groupType) .. ").")
+            else
+                ns:Print("Profile |cffffffff" .. name .. "|r activated.")
+            end
+        end
     end)
     return true
 end
@@ -115,6 +129,7 @@ end
 function ns:DeleteProfile(name)
     if name == self.activeProfile or not self:ProfileExists(name) then return false end
     self.global.profiles[name] = nil
+    if name == self.activeProfile then return false end
     -- characters that used it fall back to the default / first profile
     for key, pname in pairs(self.global.profileKeys) do
         if pname == name then
@@ -154,10 +169,11 @@ function ns:AutoProfileFor(groupType)
     return nil
 end
 
+-- no mapping for a group type (or automatic switching off) = back to the manual profile
 ns:RegisterCallback("GROUP_TYPE_CHANGED", function(groupType)
-    local name = ns:AutoProfileFor(groupType)
+    local name = ns:AutoProfileFor(groupType) or ns:ManualProfileName()
     if name and name ~= ns.activeProfile then
-        ns:SetProfile(name, true)
+        ns:SetProfile(name, true, true)
     end
 end)
 

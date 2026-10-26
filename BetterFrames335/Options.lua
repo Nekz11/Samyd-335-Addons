@@ -677,19 +677,6 @@ local function BuildLists()
     tinsert(p.bbfRefresh, UpdateList)
 end
 
-local function CastbarBlock(c, key, title, hasDetach, hasTimerCenter)
-    AddHeader(c, title)
-    AddCheck(c, "cb" .. key .. "Custom", "Customize this castbar")
-    AddSlider(c, "cb" .. key .. "Width", "Width", 80, 400, 1)
-    AddSlider(c, "cb" .. key .. "Height", "Height", 6, 40, 1)
-    AddCheck(c, "cb" .. key .. "Icon", "Show spell icon")
-    AddSlider(c, "cb" .. key .. "IconSize", "Icon size", 10, 48, 1)
-    AddCheck(c, "cb" .. key .. "Border", "Show border")
-    AddCheck(c, "cb" .. key .. "Text", "Show spell name")
-    if hasTimerCenter then AddCheck(c, "cb" .. key .. "TimerCenter", "Timer centered on the bar") end
-    if hasDetach then AddCheck(c, "cb" .. key .. "Detach", "Detach from the unit frame (position with /bbf move)") end
-end
-
 local function BuildCastbars()
     local p = AddPage("Castbars")
     local c = Cursor(p, 8, -6)
@@ -712,16 +699,15 @@ local function BuildCastbars()
         .. "the bars stack in a free container - place it with /bbf move ('Party castbars'). Grey bar = not interruptible.")
 
     local c2 = Cursor(p, COL2, -6)
-    AddHeader(c2, "Default castbars")
-    AddCheck(c2, "castTimers", "Remaining cast time on player/target/focus castbar")
-    AddSlider(c2, "targetCastScale", "Target castbar scale", 0.5, 2, 0.05, "%.2f")
-    AddSlider(c2, "focusCastScale", "Focus castbar scale", 0.5, 2, 0.05, "%.2f")
-    c2.y = c2.y - 6
-    CastbarBlock(c2, "Player", "Player castbar", false, true)
-    c2.y = c2.y - 6
-    CastbarBlock(c2, "Target", "Target castbar", true, false)
-    c2.y = c2.y - 6
-    CastbarBlock(c2, "Focus", "Focus castbar", true, false)
+    AddHeader(c2, "Default castbars (Blizzard look)")
+    AddCheck(c2, "castTimers", "Remaining cast time next to player/target/focus castbar")
+    AddSlider(c2, "playerCastScale", "Player castbar size", 0.5, 2.5, 0.05, "%.2f")
+    AddSlider(c2, "targetCastScale", "Target castbar size", 0.5, 2.5, 0.05, "%.2f")
+    AddSlider(c2, "focusCastScale", "Focus castbar size", 0.5, 2.5, 0.05, "%.2f")
+    AddCheck(c2, "cbTargetDetach", "Detach target castbar from the target frame (/bbf move)")
+    AddCheck(c2, "cbFocusDetach", "Detach focus castbar from the focus frame (/bbf move)")
+    AddNote(c2, "The default castbars keep Blizzard's art; size is changed by scaling so border, spark and icon stay aligned. "
+        .. "Move the player castbar with /bbf move ('Castbar').")
 end
 
 local function BuildInterrupt()

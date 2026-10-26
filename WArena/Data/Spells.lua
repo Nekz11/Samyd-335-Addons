@@ -170,17 +170,18 @@ ns.FlagSpells = {
 }
 
 -- spells (or classes) commonly used to check range from the player's side: class -> spell id list
+-- (targeted, 30+ yd, no minimum range, usable in any stance/form where possible)
 ns.RangeSpells = {
-	WARRIOR = { 100, 355, 3411 },        -- Charge, Taunt, Intervene
+	WARRIOR = { 64382, 355, 1161 },      -- Shattering Throw, Taunt, Challenging Shout
 	PALADIN = { 62124, 20271, 853 },     -- Hand of Reckoning, Judgement, HoJ
-	HUNTER = { 75, 1978 },               -- Auto Shot, Serpent Sting
-	ROGUE = { 1725, 2094, 1766 },        -- Distract, Blind, Kick
-	PRIEST = { 589, 585 },               -- SW:P, Smite
-	DEATHKNIGHT = { 49576, 47541 },      -- Death Grip, Death Coil
-	SHAMAN = { 403, 8042 },              -- Lightning Bolt, Earth Shock
-	MAGE = { 133, 116 },                 -- Fireball, Frostbolt
-	WARLOCK = { 686, 172 },              -- Shadow Bolt, Corruption
-	DRUID = { 5176, 8921, 339 },         -- Wrath, Moonfire, Roots
+	HUNTER = { 1130, 19434, 3044 },      -- Hunter's Mark (100 yd), Aimed Shot, Arcane Shot
+	ROGUE = { 48674, 2094, 1725 },       -- Deadly Throw, Blind, Distract
+	PRIEST = { 589, 585, 2061 },         -- SW:P, Smite, Flash Heal
+	DEATHKNIGHT = { 47541, 49576, 45524 }, -- Death Coil, Death Grip, Chains of Ice
+	SHAMAN = { 403, 8042, 51514 },       -- Lightning Bolt, Earth Shock, Hex
+	MAGE = { 133, 116, 118 },            -- Fireball, Frostbolt, Polymorph
+	WARLOCK = { 686, 172, 5782 },        -- Shadow Bolt, Corruption, Fear
+	DRUID = { 770, 5176, 8921 },         -- Faerie Fire, Wrath, Moonfire
 }
 
 ---------------------------------------------------------------------------

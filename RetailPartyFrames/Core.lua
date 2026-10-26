@@ -425,6 +425,7 @@ end
 ns:On("ADDON_LOADED", function(_, name)
     if name ~= ADDON then return end
     ns:LoadDatabase() -- Profiles.lua: migration, profile selection, ns.db / ns.global
+    if ns.FlushPendingErrors then ns:FlushPendingErrors() end -- a new file needs a client restart
 end)
 
 local function RunInits()
@@ -445,6 +446,10 @@ local function RunInits()
         ns.presetNotice = nil
     end
     ns:ReportInitErrors()
+    if ns.LogInitErrors then ns:LogInitErrors() end
+    if not ns.ShowErrors then
+        ns:Print("|cffff4040Some files of this version are not loaded yet - please restart the game client completely (not just /reload).|r")
+    end
 end
 
 ns:On("PLAYER_LOGIN", function()
@@ -478,6 +483,8 @@ SlashCmdList["RETAILPARTYFRAMES"] = function(msg)
         ns:ForceInspect()
     elseif cmd == "debug" then
         ns:Debug()
+    elseif cmd == "errors" then
+        if ns.ShowErrors then ns:ShowErrors(string.lower(rest)) else ns:Print("Please restart the game client first.") end
     elseif cmd == "profile" then
         if rest == "" then
             ns:Print("Active profile: |cffffffff" .. ns:ActiveProfileName() .. "|r. Profiles: " .. table.concat(ns:ProfileNames(), ", "))
@@ -490,7 +497,7 @@ SlashCmdList["RETAILPARTYFRAMES"] = function(msg)
         ns:ToggleMinimapButton()
     elseif cmd == "help" then
         ns:Print("/rpf - options | move - unlock/lock | test [party|raid] - preview | reset - position")
-        ns:Print("/rpf profile [name] | export | inspect - re-read talents | minimap | debug")
+        ns:Print("/rpf profile [name] | export | inspect - re-read talents | minimap | debug | errors [clear]")
     else
         ns:OpenOptions()
     end

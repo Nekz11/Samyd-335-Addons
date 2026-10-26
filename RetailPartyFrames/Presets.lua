@@ -81,11 +81,22 @@ local function ApplyOverrides(dst, src)
     end
 end
 
--- Builds a fresh profile table from a preset (defaults + overrides)
-function ns:BuildPresetProfile(key)
+-- settings that are personal rather than part of a preset: positions, solo frame, locking
+local PERSONAL = { "point", "raidPoint", "mtPoint", "scale", "raidScale", "showSolo", "locked", "hideBlizzard", "texture", "font" }
+
+local function CopyPersonal(dst, base)
+    if not base then return end
+    for _, k in ipairs(PERSONAL) do
+        if base[k] ~= nil then dst[k] = ns.DeepCopy(base[k]) end
+    end
+end
+
+-- Builds a fresh profile table from a preset (defaults + overrides + personal settings of `base`)
+function ns:BuildPresetProfile(key, base)
     local preset = self:PresetByKey(key)
     local p = self.PrepareProfile({})
     if preset then ApplyOverrides(p, preset.overrides) end
+    CopyPersonal(p, base or self.db)
     return p
 end
 
@@ -100,19 +111,39 @@ function ns:CreatePresetProfile(key, name)
         n = n + 1
         name = base .. " " .. n
     end
-    self.global.profiles[name] = self:BuildPresetProfile(key)
+    self.global.profiles[name] = self:BuildPresetProfile(key, self.db)
     return name
 end
 
 -- First start of 2.0: create both presets and map them to arena / raids
 function ns:EnsurePresets()
     local g = self.global
+    local base = g.profiles["Default"] or g.profiles[next(g.profiles)]
+    -- one-time repair for profiles created by 2.0.1: take over positions / solo setting,
+    -- and undo the automatic switch that was stored as the manual choice
+    if g.presetsCreated and not g.presetsFixed then
+        g.presetsFixed = true
+        for _, preset in ipairs(self.Presets) do
+            local p = g.profiles[preset.key]
+            if p and base and p ~= base then CopyPersonal(p, base) end
+        end
+        for key, name in pairs(g.profileKeys) do
+            if self:PresetByKey(name) and base then
+                for pname, prof in pairs(g.profiles) do
+                    if prof == base then g.profileKeys[key] = pname end
+                end
+            end
+        end
+        -- solo / party now mean "my own profile" unless mapped on purpose later
+        if g.autoProfiles.solo == "PvP - Arena" then g.autoProfiles.solo = "" end
+    end
     if g.presetsCreated then return end
     g.presetsCreated = true
+    g.presetsFixed = true
     local created = {}
     for _, preset in ipairs(self.Presets) do
         if not self:ProfileExists(preset.key) then
-            g.profiles[preset.key] = self:BuildPresetProfile(preset.key)
+            g.profiles[preset.key] = self:BuildPresetProfile(preset.key, base)
             created[#created + 1] = preset.key
             for gtype in pairs(preset.groups) do
                 if not g.autoProfiles[gtype] or g.autoProfiles[gtype] == "" then

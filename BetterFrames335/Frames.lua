@@ -266,15 +266,20 @@ end
 local DEFAULT_TEX = "Interface\\TargetingFrame\\UI-StatusBar"
 
 local function ApplyTexture(list, enabled)
-    local path = enabled and BBF:TexturePath(db.barTexture, db.barTextureCustom) or DEFAULT_TEX
+    local path = BBF:TexturePath(db.barTexture, db.barTextureCustom)
     for _, n in ipairs(list) do
         local bar = _G[n]
         if bar and bar.SetStatusBarTexture then
-            bar:SetStatusBarTexture(path)
-            -- keep the bar's current color (SetStatusBarTexture resets vertex color on some clients)
-            if bar.GetStatusBarColor then
+            if enabled then
                 local r, g, b, a = bar:GetStatusBarColor()
+                bar:SetStatusBarTexture(path)
                 if r then bar:SetStatusBarColor(r, g, b, a) end
+                bar.bbfTex = true
+            elseif bar.bbfTex then
+                local r, g, b, a = bar:GetStatusBarColor()
+                bar:SetStatusBarTexture(DEFAULT_TEX)
+                if r then bar:SetStatusBarColor(r, g, b, a) end
+                bar.bbfTex = nil
             end
         end
     end
@@ -285,15 +290,16 @@ local function ApplyFonts(list, size)
     for _, n in ipairs(list) do
         local fs = _G[n]
         if fs and fs.SetFont then
-            if not fontOrig[n] then
-                local p, s, f = fs:GetFont()
-                fontOrig[n] = { p, s, f }
-            end
             if db.fontEnabled then
+                if not fontOrig[n] then
+                    local p, s, f = fs:GetFont()
+                    fontOrig[n] = { p, s, f }
+                end
                 fs:SetFont(BBF:FontPath(db.font, db.fontCustom), size, db.fontOutline ~= "NONE" and db.fontOutline or nil)
-            else
+            elseif fontOrig[n] then
                 local o = fontOrig[n]
                 if o[1] then fs:SetFont(o[1], o[2], o[3]) end
+                fontOrig[n] = nil
             end
         end
     end
@@ -466,24 +472,25 @@ function M:Init()
 end
 
 function M:Apply()
-    -- dark mode
-    Tint(frameTextures, db.darkMode and db.darkValue or 1)
-    Tint(barTextures, (db.darkMode and db.darkModeBars) and db.darkValue or 1)
-    Tint(mapTextures, (db.darkMode and db.darkModeMinimap) and db.darkValue or 1)
+    -- dark mode (only touch textures while on, or once to restore)
+    if BBF:Once("dark", db.darkMode) then
+        Tint(frameTextures, db.darkMode and db.darkValue or 1)
+        Tint(barTextures, (db.darkMode and db.darkModeBars) and db.darkValue or 1)
+        Tint(mapTextures, (db.darkMode and db.darkModeMinimap) and db.darkValue or 1)
+    end
 
-    -- textures
-    ApplyTexture(healthBarNames, db.textureHealth and db.barTexture ~= "default")
-    ApplyTexture(manaBarNames, db.textureMana and db.barTexture ~= "default")
-    ApplyTexture(castBarNames, db.textureCastbar and db.barTexture ~= "default")
-    ApplyTexture(xpBarNames, db.textureXP and db.barTexture ~= "default")
-
-    -- fonts
+    -- textures / fonts
+    local tex = db.barTexture ~= "default"
+    ApplyTexture(healthBarNames, db.textureHealth and tex)
+    ApplyTexture(manaBarNames, db.textureMana and tex)
+    ApplyTexture(castBarNames, db.textureCastbar and tex)
+    ApplyTexture(xpBarNames, db.textureXP and tex)
     ApplyFonts(nameFonts, db.fontSizeName)
     ApplyFonts(levelFonts, db.fontSizeName)
     ApplyFonts(valueFonts, db.fontSizeValue)
 
     -- health colors (re-runs Blizzard's coloring, our hook recolors afterwards)
-    if HealthBar_OnValueChanged then
+    if HealthBar_OnValueChanged and BBF:Once("hpcolor", db.classColorHealth) then
         for _, n in ipairs(healthBarNames) do
             local bar = _G[n]
             if bar and type(bar.unit) == "string" and UnitExists(bar.unit) then
@@ -492,27 +499,27 @@ function M:Apply()
         end
     end
 
-    -- names, portraits, levels, status text
+    -- names, portraits, levels
+    local nameFeature = db.hideRealm or db.arenaNumbers or db.classColorNames
     for _, n in ipairs(unitFrameNames) do
         local f = _G[n]
         if f and type(f.unit) == "string" and UnitExists(f.unit) then
-            if type(f.name) == "table" and f.name.SetText then
+            if BBF:Once("names_" .. n, nameFeature) and type(f.name) == "table" and f.name.SetText then
                 f.name:SetText(GetUnitName(f.unit))
                 FixName(f)
             end
             Portrait(f)
-            if f.levelText and f.levelText.Show then
-                if TargetFrame_CheckLevel and (f == TargetFrame or f == FocusFrame) then
-                    TargetFrame_CheckLevel(f)
-                end
+            if TargetFrame_CheckLevel and (f == TargetFrame or f == FocusFrame)
+                and BBF:Once("level_" .. n, db.hideLevelText or db.classColorLevel) then
+                TargetFrame_CheckLevel(f)
             end
         end
     end
-    if PlayerLevelText then
+    if PlayerLevelText and BBF:Once("level_player", db.hideLevelText or db.classColorLevel) then
         if not db.hideLevelText then PlayerLevelText:Show() end
         LevelText(PlayerFrame)
     end
-    if TextStatusBar_UpdateTextString then
+    if TextStatusBar_UpdateTextString and BBF:Once("textfmt", db.textFormat ~= "default") then
         for _, list in ipairs({ healthBarNames, manaBarNames }) do
             for _, n in ipairs(list) do
                 local bar = _G[n]
@@ -522,7 +529,7 @@ function M:Apply()
     end
 
     -- name backgrounds
-    if TargetFrame_CheckFaction then
+    if TargetFrame_CheckFaction and BBF:Once("namebg", db.classColorNameBG) then
         for _, f in ipairs({ TargetFrame, FocusFrame }) do
             if f and type(f.unit) == "string" and UnitExists(f.unit) then TargetFrame_CheckFaction(f) end
         end
@@ -549,31 +556,38 @@ function M:Apply()
         BBF:AttachHide(_G["FocusFrameToTDebuff" .. i], "hideToTDebuffs")
     end
     -- ToT frames are secure: alpha works in combat, Hide() wouldn't
-    if TargetFrameToT then TargetFrameToT:SetAlpha(db.hideTargetToT and 0 or 1) end
-    if FocusFrameToT then FocusFrameToT:SetAlpha(db.hideFocusToT and 0 or 1) end
-    ApplyToT(TargetFrameToT, db.totOffsetX, db.totOffsetY)
-    ApplyToT(FocusFrameToT, db.focusToTOffsetX, db.focusToTOffsetY)
+    BBF:SetAlphaIf(TargetFrameToT, db.hideTargetToT, "tot")
+    BBF:SetAlphaIf(FocusFrameToT, db.hideFocusToT, "tot")
+    if BBF:Once("totoff", db.totOffsetX ~= 0 or db.totOffsetY ~= 0) then
+        ApplyToT(TargetFrameToT, db.totOffsetX, db.totOffsetY)
+    end
+    if BBF:Once("ftotoff", db.focusToTOffsetX ~= 0 or db.focusToTOffsetY ~= 0) then
+        ApplyToT(FocusFrameToT, db.focusToTOffsetX, db.focusToTOffsetY)
+    end
 
     -- secure frame tweaks -> out of combat only
     BBF:RunOOC("frameScale", function()
-        PlayerFrame:SetScale(db.scalePlayer)
-        TargetFrame:SetScale(db.scaleTarget)
-        if PetFrame then PetFrame:SetScale(db.scalePet) end
-        if TargetFrameToT then TargetFrameToT:SetScale(db.scaleToT) end
-        if FocusFrameToT then FocusFrameToT:SetScale(db.scaleFocusToT) end
-        for i = 1, 4 do
-            local f = _G["PartyMemberFrame" .. i]
-            if f then f:SetScale(db.scaleParty) end
-        end
+        BBF:SetScaleIf(PlayerFrame, db.scalePlayer)
+        BBF:SetScaleIf(TargetFrame, db.scaleTarget)
+        BBF:SetScaleIf(PetFrame, db.scalePet)
+        BBF:SetScaleIf(TargetFrameToT, db.scaleToT)
+        BBF:SetScaleIf(FocusFrameToT, db.scaleFocusToT)
+        for i = 1, 4 do BBF:SetScaleIf(_G["PartyMemberFrame" .. i], db.scaleParty) end
         if FocusFrame then
-            if FocusFrame_SetSmallSize then
+            if FocusFrame_SetSmallSize and BBF:Once("minifocus", db.miniFocus) then
                 FocusFrame_SetSmallSize(db.miniFocus and true or false, true)
             end
-            FocusFrame:SetScale(db.scaleFocus * (db.miniFocus and (SMALL_FOCUS_SCALE or 0.75) or 1))
+            local mini = db.miniFocus and (SMALL_FOCUS_SCALE or 0.75) or 1
+            if db.miniFocus then
+                FocusFrame:SetScale(db.scaleFocus * mini)
+                FocusFrame.bbfScaled = true
+            else
+                BBF:SetScaleIf(FocusFrame, db.scaleFocus)
+            end
         end
-        PlayerFrame:EnableMouse(not db.clickthroughPlayer)
-        TargetFrame:EnableMouse(not db.clickthroughTarget)
-        if FocusFrame then FocusFrame:EnableMouse(not db.clickthroughFocus) end
+        if BBF:Once("ct_player", db.clickthroughPlayer) then PlayerFrame:EnableMouse(not db.clickthroughPlayer) end
+        if BBF:Once("ct_target", db.clickthroughTarget) then TargetFrame:EnableMouse(not db.clickthroughTarget) end
+        if FocusFrame and BBF:Once("ct_focus", db.clickthroughFocus) then FocusFrame:EnableMouse(not db.clickthroughFocus) end
     end)
 
     if not db.smoothBars then

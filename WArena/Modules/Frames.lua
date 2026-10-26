@@ -12,7 +12,7 @@ local MAX = ns.MAX_ARENA
 ns:AddDefaults({
 	-- size & position
 	scale = 1.0, width = 180, height = 40, spacing = 24, growUp = false, horizontal = false, mirror = false,
-	bgAlpha = 0.6, unseenAlpha = 0.5,
+	bgAlpha = 0.6, unseenAlpha = 0.65,
 	blizzard = false,
 	-- sorting / roles
 	healer = "last", healerIcon = true,
@@ -1029,7 +1029,7 @@ ns:RegisterEvent("ARENA_OPPONENT_UPDATE", function(_, unit, updateType)
 		ns:Fire("ENEMY_UNSEEN", f)
 	elseif updateType == "destroyed" then
 		f.unseen = true
-		f:SetAlpha(ns.db.unseenAlpha * 0.6)
+		f:SetAlpha(ns.db.unseenAlpha)
 		f.cast:Hide()
 	elseif updateType == "cleared" then
 		Frames:ResetFrame(f)

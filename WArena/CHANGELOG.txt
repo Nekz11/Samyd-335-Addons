@@ -1,6 +1,10 @@
 WArena – changelog
 ==================
 
+2.0.2
+- Frames were hard to see in arenas: range fade is off by default (and migrated off), stealth/unseen opacity 0.65,
+  better range-check spells per class
+
 2.0.1
 - Presets: PvP – Arena, PvP – Battleground, PvE – Raid (Themes & Presets page, /warena preset arena|bg|raid)
 

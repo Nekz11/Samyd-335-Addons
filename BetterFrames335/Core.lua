@@ -6,7 +6,7 @@ BBF335 = BBF335 or {}
 local BBF = BBF335
 
 BBF.ADDON   = "BetterFrames335"
-BBF.version = "2.1.1"
+BBF.version = "2.1.3"
 BBF.modules = {}
 
 -- Invisible parent used to hide secure frames without touching them in combat.
@@ -187,10 +187,10 @@ local defaults = {
     castTimers      = true,
     targetCastScale = 1,
     focusCastScale  = 1,
-    -- per castbar customisation (player / target / focus)
-    cbPlayerCustom = false, cbPlayerWidth = 195, cbPlayerHeight = 13, cbPlayerIcon = true,  cbPlayerIconSize = 20, cbPlayerBorder = true, cbPlayerText = true, cbPlayerTimerCenter = false,
-    cbTargetCustom = false, cbTargetWidth = 150, cbTargetHeight = 10, cbTargetIcon = true,  cbTargetIconSize = 16, cbTargetBorder = true, cbTargetText = true, cbTargetDetach = false,
-    cbFocusCustom  = false, cbFocusWidth  = 150, cbFocusHeight  = 10, cbFocusIcon  = true,  cbFocusIconSize  = 16, cbFocusBorder  = true, cbFocusText  = true, cbFocusDetach  = false,
+    -- default castbars keep Blizzard's look; size via scale, target/focus optionally detached
+    playerCastScale = 1,
+    cbTargetDetach  = false,
+    cbFocusDetach   = false,
     -- interrupt helpers
     interruptHighlight      = false,
     interruptHighlightStart = 0.3,
@@ -467,6 +467,42 @@ BBF:RegisterEvent("PLAYER_REGEN_ENABLED", function()
 end)
 
 ----------------------------------------------------------------------
+-- "only touch it if asked" helpers: other addons (RetailUI, party frame addons ...) style the
+-- same frames, so we change alpha / scale only while our option is on, and put the default
+-- back exactly once when the option is turned off again.
+----------------------------------------------------------------------
+function BBF:SetAlphaIf(f, hide, key)
+    if not f then return end
+    local flag = "bbfAlpha_" .. key
+    if hide then
+        f:SetAlpha(0)
+        f[flag] = true
+    elseif f[flag] then
+        f:SetAlpha(1)
+        f[flag] = nil
+    end
+end
+
+function BBF:SetScaleIf(f, scale)
+    if not f then return end
+    if scale and scale ~= 1 then
+        f:SetScale(scale)
+        f.bbfScaled = true
+    elseif f.bbfScaled then
+        f:SetScale(1)
+        f.bbfScaled = nil
+    end
+end
+
+-- remembers that a feature was active once so its "off" path can restore defaults
+BBF.touched = {}
+function BBF:Once(key, active)
+    if active then self.touched[key] = true; return true end
+    if self.touched[key] then self.touched[key] = nil; return true end
+    return false
+end
+
+----------------------------------------------------------------------
 -- "keep hidden" helper shared by Hide.lua / Frames.lua:
 -- hooks obj:Show() once and re-hides it while any attached option is on
 ----------------------------------------------------------------------
@@ -533,11 +569,10 @@ BBF.presets = {
             playerBuffFilter = true, playerBuffWhitelist = false, playerDebuffFilter = false,
             -- castbars & interrupts
             partyCastbars = true, partyCastIcon = true, partyCastTimer = true, castTimers = true,
-            cbTargetCustom = true, cbTargetWidth = 190, cbTargetHeight = 16, cbTargetIcon = true, cbTargetIconSize = 22,
-            cbFocusCustom = true, cbFocusWidth = 190, cbFocusHeight = 16, cbFocusIcon = true, cbFocusIconSize = 22,
-            interruptHighlight = true, interruptHighlightFocus = true, interruptHighlightStart = 0.3, interruptHighlightEnd = 0.3,
+            playerCastScale = 1.1, targetCastScale = 1.25, focusCastScale = 1.25,
+            interruptHighlight = false,
             interruptIcon = true, interruptIconTarget = true, interruptIconFocus = true, interruptIconActiveOnly = false,
-            interruptRecolor = true,
+            interruptRecolor = false,
             -- indicators
             combatIndicator = true, combatShowIn = true, combatShowOut = false, combatEnemyOnly = true, combatArenaOnly = false,
             absorbIndicator = true, absorbPlayer = true, absorbTimer = true, absorbAmount = true,
@@ -568,8 +603,7 @@ BBF.presets = {
             playerBuffFilter = false, playerDebuffFilter = false,
             -- castbars
             partyCastbars = false, castTimers = true,
-            cbTargetCustom = true, cbTargetWidth = 230, cbTargetHeight = 18, cbTargetIcon = true, cbTargetIconSize = 24,
-            cbFocusCustom = false,
+            playerCastScale = 1.1, targetCastScale = 1.4, focusCastScale = 1,
             interruptHighlight = false, interruptIcon = false, interruptRecolor = false,
             -- indicators
             combatIndicator = false, absorbIndicator = true, absorbPlayer = true, absorbTimer = true, absorbAmount = true,

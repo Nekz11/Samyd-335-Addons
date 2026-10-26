@@ -87,22 +87,14 @@ local function Situational()
     local inParty = GetNumPartyMembers() > 0
     local inRaid = GetNumRaidMembers() > 0
 
-    if MinimapCluster then
-        MinimapCluster:SetAlpha((db.hideMinimapArena and arena) and 0 or 1)
-    end
-    if WatchFrame then
-        WatchFrame:SetAlpha((db.hideTrackerArena and arena) and 0 or 1)
-    end
+    BBF:SetAlphaIf(MinimapCluster, db.hideMinimapArena and arena, "arena")
+    BBF:SetAlphaIf(WatchFrame, db.hideTrackerArena and arena, "arena")
     for i = 1, 4 do
-        local f = _G["PartyMemberFrame" .. i]
-        if f then f:SetAlpha((db.hidePartyArena and arena) and 0 or 1) end
-        local b = _G["Boss" .. i .. "TargetFrame"]
-        if b then
-            local hide = (db.hideBossRaid and inRaid) or (db.hideBossParty and inParty and not inRaid)
-            b:SetAlpha(hide and 0 or 1)
-        end
+        BBF:SetAlphaIf(_G["PartyMemberFrame" .. i], db.hidePartyArena and arena, "arena")
+        local hideBoss = (db.hideBossRaid and inRaid) or (db.hideBossParty and inParty and not inRaid)
+        BBF:SetAlphaIf(_G["Boss" .. i .. "TargetFrame"], hideBoss, "group")
     end
-    if PetFrame then PetFrame:SetAlpha(db.hidePetFrame and 0 or 1) end
+    BBF:SetAlphaIf(PetFrame, db.hidePetFrame, "pet")
 end
 
 function M:Init()
@@ -122,15 +114,11 @@ function M:Apply()
         for _, n in ipairs(list) do BBF:AttachHide(_G[n], key) end
     end
 
-    -- action button texts (alpha based -> can be toggled live)
-    local macroAlpha = db.hideMacroText and 0 or 1
-    local hotkeyAlpha = db.hideHotkeyText and 0 or 1
+    -- action button texts (alpha based -> can be toggled live; untouched while both options are off)
     for _, bar in ipairs(actionBars) do
         for i = 1, 12 do
-            local nameText = _G[bar .. i .. "Name"]
-            local hotkey = _G[bar .. i .. "HotKey"]
-            if nameText then nameText:SetAlpha(macroAlpha) end
-            if hotkey then hotkey:SetAlpha(hotkeyAlpha) end
+            BBF:SetAlphaIf(_G[bar .. i .. "Name"], db.hideMacroText, "macro")
+            BBF:SetAlphaIf(_G[bar .. i .. "HotKey"], db.hideHotkeyText, "hotkey")
         end
     end
 

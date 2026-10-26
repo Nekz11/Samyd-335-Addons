@@ -1756,13 +1756,43 @@ local function UpdatePlate(d)
 end
 
 ----------------------------------------------------------------
+-- Fehlerschutz: ein Fehler an einer Plakette darf nicht alle anderen stoppen.
+-- Jede Fehlermeldung wird einmal im Chat gezeigt, der Rest unter /bbp errors.
+----------------------------------------------------------------
+local errors, errorCount = {}, 0
+Plates.errors = errors
+local function Report(where, err)
+	err = tostring(err)
+	local key = where .. ": " .. err
+	errorCount = errorCount + 1
+	if not errors[key] then
+		errors[key] = 1
+		errors[#errors + 1] = key
+		if #errors <= 3 then
+			ns:Print("|cffff5555Error|r (" .. where .. "): " .. err .. "  -  /bbp errors")
+		end
+	else
+		errors[key] = errors[key] + 1
+	end
+end
+local function SafeUpdate(d)
+	local ok, err = pcall(UpdatePlate, d)
+	if not ok then Report("UpdatePlate " .. tostring(d.name), err) end
+end
+function Plates:Errors()
+	if #errors == 0 then ns:Print("No errors recorded.") return end
+	ns:Print(format("%d errors (%d distinct):", errorCount, #errors))
+	for i = 1, math.min(#errors, 10) do ns:Print("  " .. errors[errors[i]] .. "x " .. errors[i]) end
+end
+
+----------------------------------------------------------------
 -- Anzeigen / Verstecken
 ----------------------------------------------------------------
 local function PlateShow(d)
 	visible[d.frame] = d
 	ReNeutralize(d.parts)
 	NewUnit(d, d.parts.name:GetText())
-	UpdatePlate(d)
+	SafeUpdate(d)
 	if d.parts.cb:IsShown() then
 		CastShow(d)
 	else
@@ -1794,9 +1824,17 @@ local function SetupPlate(f)
 	p.hp:HookScript("OnValueChanged", function() if visible[f] then UpdateHealth(d) end end)
 	p.hp:HookScript("OnMinMaxChanged", function() if visible[f] then UpdateHealth(d) end end)
 
-	p.cb:HookScript("OnShow", function() CastShow(d) end)
+	p.cb:HookScript("OnShow", function()
+		local ok, err = pcall(CastShow, d)
+		if not ok then Report("CastShow", err) end
+	end)
 	p.cb:HookScript("OnHide", function() d.castBlizz = false d.cast:Hide() d.cast.kick:Hide() end)
-	p.cb:HookScript("OnValueChanged", function() if d.cast:IsShown() then CastUpdate(d) end end)
+	p.cb:HookScript("OnValueChanged", function()
+		if d.cast:IsShown() then
+			local ok, err = pcall(CastUpdate, d)
+			if not ok then Report("CastUpdate", err) end
+		end
+	end)
 
 	f:HookScript("OnShow", function() PlateShow(d) end)
 	f:HookScript("OnHide", function() PlateHide(d) end)
@@ -1826,7 +1864,7 @@ function Plates:RefreshAll()
 		for i = 1, #d.auraIcons do d.auraIcons[i].size = nil end
 		for i = 1, #d.drIcons do d.drIcons[i].size = nil end
 		if visible[f] then
-			UpdatePlate(d)
+			SafeUpdate(d)
 			if d.parts.cb:IsShown() then CastShow(d) else d.cast:Hide() end
 		end
 	end
@@ -2151,7 +2189,8 @@ function Plates:Init()
 			for d in pairs(cleuActive) do
 				local c = d.castCleu
 				if c and ns.Casts.store[d.guid] == c and (c.interruptedAt or now <= c.start + c.duration) then
-					CleuCastFrame(d, now)
+					local ok, err = pcall(CleuCastFrame, d, now)
+					if not ok then Report("CastFrame", err) CleuCastStop(d) end
 				else
 					CleuCastStop(d)
 				end
@@ -2161,11 +2200,13 @@ function Plates:Init()
 		tick = tick + elapsed
 		if tick >= (ns.db.updateRate or 0.1) then
 			tick = 0
-			ns.Auras:Flush()
+			local ok, err = pcall(ns.Auras.Flush, ns.Auras)
+			if not ok then Report("Auras", err) end
 			ns.Casts:Expire(GetTime())
-			GatherState()
+			ok, err = pcall(GatherState)
+			if not ok then Report("GatherState", err) end
 			for _, d in pairs(visible) do
-				UpdatePlate(d)
+				SafeUpdate(d)
 			end
 		end
 

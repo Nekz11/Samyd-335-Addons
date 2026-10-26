@@ -635,10 +635,22 @@ ns:On("COMBAT_LOG_EVENT_UNFILTERED", function(_, _, event, srcGUID, srcName, src
 			EndCast(srcGUID)
 		else
 			if not channelByName then BuildChannels() end
-			if channelByName[spellName] then StartCast(srcGUID, spellId, spellName, true, GetTime()) end
+			if channelByName[spellName] then
+				StartCast(srcGUID, spellId, spellName, true, GetTime())
+			elseif c and not c.interruptedAt then
+				-- Ein anderer Zauber mit Zauberzeit wurde fertig: der alte war abgebrochen.
+				-- Sofortzauber (Procs, Schmuck) lassen die Leiste in Ruhe.
+				local _, _, _, _, _, _, castTime = GetSpellInfo(spellId)
+				if castTime and castTime > 0 then EndCast(srcGUID) end
+			end
 		end
 	elseif event == "SPELL_CAST_FAILED" then
 		EndCast(srcGUID)
+	elseif event == "SWING_DAMAGE" or event == "SWING_MISSED" or event == "RANGE_DAMAGE" or event == "RANGE_MISSED" then
+		-- Nahkampf/Schuss ist während eines Zaubers unmöglich: der Zauber wurde abgebrochen.
+		-- (Der Client meldet SPELL_CAST_FAILED nur für den eigenen Charakter.)
+		local c = casts[srcGUID]
+		if c and not c.interruptedAt then EndCast(srcGUID) end
 	elseif event == "SPELL_INTERRUPT" then
 		local c = dstGUID and casts[dstGUID]
 		if c then
@@ -656,11 +668,64 @@ function C:Learn(unit)
 	local name, _, _, _, startTime, endTime = UnitCastingInfo(unit)
 	if name and startTime and endTime and endTime > startTime then
 		C.castDur[name] = (endTime - startTime) / 1000
+		-- laufenden Kampflog-Zauber dieser Einheit auf die echte Dauer setzen
+		local guid = UnitGUID(unit)
+		local c = guid and casts[guid]
+		if c and c.name == name and not c.channel then
+			c.start = startTime / 1000
+			c.duration = (endTime - startTime) / 1000
+		end
+	end
+end
+
+-- Einheiten mit Unit-Token melden Zauberende/-abbruch direkt (Ziel, Fokus,
+-- Arena-Gegner, Gruppe). Das fängt abgebrochene Zauber ab, die der Kampflog
+-- bei fremden Einheiten nicht meldet.
+local CAST_EVENT_UNITS = {
+	target = true, focus = true, mouseover = true,
+	arena1 = true, arena2 = true, arena3 = true, arena4 = true, arena5 = true,
+	party1 = true, party2 = true, party3 = true, party4 = true,
+	partypet1 = true, partypet2 = true, partypet3 = true, partypet4 = true,
+	arenapet1 = true, arenapet2 = true, arenapet3 = true, arenapet4 = true, arenapet5 = true,
+}
+local function UnitCastEnded(_, unit)
+	if not unit or not CAST_EVENT_UNITS[unit] then return end
+	local guid = UnitGUID(unit)
+	local c = guid and casts[guid]
+	if not c or c.interruptedAt then return end
+	-- Wenn die Einheit tatsächlich noch zaubert (anderer Zauber), nichts tun
+	if UnitCastingInfo(unit) or UnitChannelInfo(unit) then return end
+	EndCast(guid)
+end
+ns:On("UNIT_SPELLCAST_STOP", UnitCastEnded)
+ns:On("UNIT_SPELLCAST_FAILED", UnitCastEnded)
+ns:On("UNIT_SPELLCAST_INTERRUPTED", UnitCastEnded)
+ns:On("UNIT_SPELLCAST_CHANNEL_STOP", UnitCastEnded)
+ns:On("UNIT_SPELLCAST_START", function(_, unit)
+	if unit and CAST_EVENT_UNITS[unit] then C:Learn(unit) end
+end)
+
+-- Zusätzliche Prüfung pro Tick: zaubert die Einheit (falls direkt sichtbar) wirklich noch?
+local CHECK_UNITS = { "target", "focus", "mouseover", "arena1", "arena2", "arena3", "arena4", "arena5" }
+local lastVerify = 0
+function C:Verify(now)
+	if now - lastVerify < 0.2 then return end
+	lastVerify = now
+	for i = 1, #CHECK_UNITS do
+		local u = CHECK_UNITS[i]
+		local guid = UnitGUID(u)
+		local c = guid and casts[guid]
+		if c and not c.interruptedAt and now - c.start > 0.3 then
+			if not UnitCastingInfo(u) and not UnitChannelInfo(u) then
+				EndCast(guid)
+			end
+		end
 	end
 end
 
 -- Abgelaufene Zauber wegräumen (vom Plates-Tick aufgerufen)
 function C:Expire(now)
+	self:Verify(now)
 	for guid, c in pairs(casts) do
 		if c.interruptedAt then
 			if now > c.interruptedAt + 0.8 then EndCast(guid) end
@@ -677,8 +742,10 @@ function A:TopCategory(guid)
 	local best, bestPrio = nil, 99
 	local now = GetTime()
 	for _, a in pairs(t) do
-		if a.cat and a.prio < bestPrio and (a.expires == 0 or a.expires > now) then
-			best, bestPrio = a.cat, a.prio
+		-- nur Kontrolleffekte färben den Balken, keine Buffs/eigene Listen/HoTs
+		local cat = a.cat
+		if cat and cat ~= "buff" and cat ~= "custom" and not a.lockout and a.prio < bestPrio and (a.expires == 0 or a.expires > now) then
+			best, bestPrio = cat, a.prio
 		end
 	end
 	return best

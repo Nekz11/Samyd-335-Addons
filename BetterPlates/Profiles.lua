@@ -303,7 +303,7 @@ P.PRESETS = {
 			castbar = true, castHeight = 10, castIcon = true, castTimer = true, castName = true,
 			castInterruptIcon = true, kickCdText = true, castInterrupted = true, castSound = true, castSoundId = 1,
 			castEmphasisList = ARENA_CASTS,
-			friendlyNameOnly = false, friendlyNameOnlyPvP = true, friendlyClassIconOnly = true, friendlyBorder = true, friendlyScale = 0.8,
+			friendlyNameOnly = false, friendlyNameOnlyPvP = false, friendlyClassIconOnly = false, friendlyBorder = true, friendlyScale = 0.8,
 			trinketIndicator = true, enemyTargetIndicator = true, targetedBy = true, flagCarrier = true, healerPriority = false,
 			totemIndicator = true, allTotemIcons = true, totemTimers = true, smallPets = true,
 			stacking = false, stackingPvP = false, threatMode = 1, raidNpcHighlight = false, bossBig = false,

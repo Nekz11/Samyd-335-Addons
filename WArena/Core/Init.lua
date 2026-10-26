@@ -164,6 +164,7 @@ end
 ---------------------------------------------------------------------------
 ns.defaults = {
 	debug = false,
+	migrated202 = false,
 	locked = true,
 	point = { "RIGHT", "UIParent", "RIGHT", -260, 120 },
 }
@@ -231,6 +232,13 @@ function ns:ActivateProfile(name, silent)
 	WArenaDB.chars[ns:CharKey()] = name
 	ns.db = WArenaDB.profiles[name]
 	ApplyDefaults(ns.db)
+	if not ns.db.migrated202 then
+		-- 2.0.0/2.0.1 shipped with range fade on and low opacities; frames were hard to see
+		ns.db.migrated202 = true
+		ns.db.indRange = false
+		if (ns.db.rangeAlpha or 1) < 0.6 then ns.db.rangeAlpha = 0.6 end
+		if (ns.db.unseenAlpha or 1) < 0.65 then ns.db.unseenAlpha = 0.65 end
+	end
 	if ns.initialized then
 		for _, mod in ipairs(ns.modules) do
 			if mod.OnProfileChanged then mod:OnProfileChanged() end

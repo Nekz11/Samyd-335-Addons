@@ -1362,7 +1362,16 @@ local function BuildProfiles()
         function() return ns:ActiveProfileName() end,
         function(v) ns:SetProfile(v, true) end)
     p.widgets[#p.widgets + 1] = dActive
-    L.y = L.y - 40
+    local autoNote = Text(p, 20, L.y - 32, 260, "", "GameFontDisableSmall", 24)
+    p.widgets[#p.widgets + 1] = { Refresh = function()
+        local manual = ns:ManualProfileName()
+        if manual ~= ns:ActiveProfileName() then
+            autoNote:SetText("Active automatically for " .. (ns.GroupTypeLabels[ns.groupType] or ns.groupType) .. ". Your own choice: " .. manual)
+        else
+            autoNote:SetText("")
+        end
+    end }
+    L.y = L.y - 58
     local newBox = EditBox(p, 16, L.y - 14, 170, "New profile")
     L.y = L.y - 40
     Button(p, 16, L.y, 125, "Create (copy current)", function()
@@ -1438,7 +1447,7 @@ local function BuildProfiles()
 
     local R = Column(p, 300, TOP)
     Header(R, "Automatic profiles")
-    Check(R, "Switch profile by group type", "global:autoProfiles.enabled", nil, function() ns:UpdateGroupType(true) end)
+    Check(R, "Switch profile by group type", "global:autoProfiles.enabled", "Types set to '(keep current)' use the profile you picked above. Leaving an arena or raid switches back to it.", function() ns:UpdateGroupType(true) end)
     for _, key in ipairs({ "solo", "party", "raid10", "raid25", "raid40", "arena", "bg" }) do
         Dropdown(R, ns.GroupTypeLabels[key], "global:autoProfiles." .. key, namesWithNone, function() ns:UpdateGroupType(true) end)
     end

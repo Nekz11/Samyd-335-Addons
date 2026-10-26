@@ -2,11 +2,12 @@
 ## Title: RetailPartyFrames
 ## Notes: Retail-style party and raid frames with in-frame cast bars, party cooldowns, dispel highlighting, indicators and click-casting (WotLK 3.3.5a)
 ## Author: Samyd (Blackrock)
-## Version: 2.0.1
+## Version: 2.0.3
 ## SavedVariables: RetailPartyFramesDB
 ## OptionalDeps: LibHealComm-4.0, LibSharedMedia-3.0, Clique
 
 Core.lua
+ErrorLog.lua
 Profiles.lua
 Presets.lua
 SpellData.lua

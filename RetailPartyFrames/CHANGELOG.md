@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2
+- Automatic profiles: group types without a mapping (and switching the automatic off) return to the
+  profile you picked yourself instead of keeping the last automatic one
+- Presets take over positions, scale, solo frame and lock state from your current profile
+- One-time repair of profiles created by 2.0.1
+
 ## 2.0.1
 - Built-in presets "PvP - Arena" and "PvE - Raid": created as profiles on first start and mapped to
   arenas / raids automatically; re-creatable from the Profiles page

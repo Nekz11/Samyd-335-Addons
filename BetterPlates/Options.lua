@@ -1097,6 +1097,8 @@ SlashCmdList.BETTERPLATES = function(msg)
 		if arg == "" then BetterPlates_ToggleStacking() else ns.Plates:DebugStack() end
 	elseif cmd == "plates" then
 		ns.Plates:DebugPlates()
+	elseif cmd == "errors" then
+		ns.Plates:Errors()
 	elseif cmd == "donate" then
 		ns:ToggleDonate()
 	elseif cmd == "test" then

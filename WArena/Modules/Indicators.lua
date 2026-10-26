@@ -8,7 +8,7 @@ local GetTime, UnitExists, UnitIsUnit = GetTime, UnitExists, UnitIsUnit
 
 ns:AddDefaults({
 	indTargetingYou = true, indPartyTargets = true, indEnemyTarget = true, indEnemyTargetMode = "name",
-	indRange = true, rangeAlpha = 0.45, indDrink = true, indLowHP = true, lowHPThreshold = 25,
+	indRange = false, rangeAlpha = 0.6, indDrink = true, indLowHP = true, lowHPThreshold = 25,
 	lowHPColor = { r = 1, g = 0.1, b = 0.1, a = 0.6 }, indStealth = true,
 	indIconSize = 14,
 })

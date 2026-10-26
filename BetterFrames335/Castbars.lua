@@ -324,22 +324,6 @@ end
 ----------------------------------------------------------------------
 local defaultBars = {}   -- key -> bar
 
-local function Orig(bar)
-    if bar.bbfOrig then return bar.bbfOrig end
-    local n = bar:GetName()
-    local o = { w = bar:GetWidth(), h = bar:GetHeight() }
-    local border, flash, icon = _G[n .. "Border"], _G[n .. "Flash"], _G[n .. "Icon"]
-    if border then o.bw, o.bh = border:GetWidth(), border:GetHeight() end
-    if flash then o.fw, o.fh = flash:GetWidth(), flash:GetHeight() end
-    if icon then
-        o.iw = icon:GetWidth()
-        local p, rel, rp, x, y = icon:GetPoint(1)
-        o.ipoint = p and { p, rel, rp, x, y }
-    end
-    bar.bbfOrig = o
-    return o
-end
-
 local function GetInterruptIcon(bar)
     local ic = bar.bbfInt
     if ic then return ic end
@@ -379,55 +363,6 @@ local function GetHighlights(bar)
     end
     bar.bbfHL = hl
     return hl
-end
-
-local function CustomizeBar(key, bar)
-    if not bar then return end
-    local o = Orig(bar)
-    local n = bar:GetName()
-    local custom = db["cb" .. key .. "Custom"]
-    local w = custom and db["cb" .. key .. "Width"] or o.w
-    local h = custom and db["cb" .. key .. "Height"] or o.h
-    bar:SetWidth(w)
-    bar:SetHeight(h)
-    local border, flash, icon, text = _G[n .. "Border"], _G[n .. "Flash"], _G[n .. "Icon"], _G[n .. "Text"]
-    local sx, sy = w / o.w, h / o.h
-    if border and o.bw then border:SetWidth(o.bw * sx); border:SetHeight(o.bh * sy) end
-    if flash and o.fw then flash:SetWidth(o.fw * sx); flash:SetHeight(o.fh * sy) end
-    bar.bbfShowBorder = (not custom) or db["cb" .. key .. "Border"]
-    if border then
-        if bar.bbfShowBorder then border:Show() else border:Hide() end
-    end
-    if text then text:SetAlpha((custom and not db["cb" .. key .. "Text"]) and 0 or 1) end
-    if icon then
-        bar.bbfShowIcon = custom and db["cb" .. key .. "Icon"]
-        if custom then
-            local size = db["cb" .. key .. "IconSize"]
-            icon:SetWidth(size)
-            icon:SetHeight(size)
-            icon:ClearAllPoints()
-            icon:SetPoint("RIGHT", bar, "LEFT", -4, 0)
-        elseif o.ipoint then
-            icon:SetWidth(o.iw)
-            icon:SetHeight(o.iw)
-            icon:ClearAllPoints()
-            icon:SetPoint(o.ipoint[1], o.ipoint[2], o.ipoint[3], o.ipoint[4], o.ipoint[5])
-        end
-        if key == "Player" then
-            if bar.bbfShowIcon then icon:Show() else icon:Hide() end
-        end
-    end
-    -- timer position
-    if bar.bbfTimer then
-        bar.bbfTimer:ClearAllPoints()
-        if key == "Player" and db.cbPlayerTimerCenter then
-            bar.bbfTimer:SetPoint("CENTER", bar, "CENTER", 0, 0)
-        elseif key == "Player" then
-            bar.bbfTimer:SetPoint("LEFT", bar, "RIGHT", 8, 1)
-        else
-            bar.bbfTimer:SetPoint("LEFT", bar, "RIGHT", 6, 0)
-        end
-    end
 end
 
 -- the Blizzard spellbar for target/focus is re-anchored by Blizzard on every aura update
@@ -541,15 +476,10 @@ local function HookDefaultBar(key, bar)
     defaultBars[key] = bar
     bar.bbfKey = key
     local t = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    t:SetPoint("LEFT", bar, "RIGHT", key == "Player" and 8 or 6, key == "Player" and 1 or 0)
     bar.bbfTimer = t
     bar:HookScript("OnUpdate", BBF:Guard("Castbar" .. key, BarOnUpdate))
     bar:HookScript("OnShow", function(self)
-        local n = self:GetName()
-        local icon, border = _G[n .. "Icon"], _G[n .. "Border"]
-        if key == "Player" and icon then
-            if self.bbfShowIcon then icon:Show() else icon:Hide() end
-        end
-        if border and self.bbfShowBorder == false then border:Hide() end
         self.bbfRecolored = nil
         if key ~= "Player" then Detach(self, key) end
     end)
@@ -647,16 +577,15 @@ function M:Apply()
             Refresh(f)
         end
     end
-    CustomizeBar("Player", CastingBarFrame)
-    CustomizeBar("Target", TargetFrameSpellBar)
-    CustomizeBar("Focus", FocusFrameSpellBar)
+    -- Blizzard look untouched; size via scale only
+    BBF:SetScaleIf(CastingBarFrame, db.playerCastScale or 1)
     if TargetFrameSpellBar then
-        TargetFrameSpellBar:SetScale(db.targetCastScale)
+        BBF:SetScaleIf(TargetFrameSpellBar, db.targetCastScale)
         if db.cbTargetDetach then Detach(TargetFrameSpellBar, "Target")
         elseif Target_Spellbar_AdjustPosition and TargetFrame.spellbar then pcall(Target_Spellbar_AdjustPosition, TargetFrameSpellBar) end
     end
     if FocusFrameSpellBar then
-        FocusFrameSpellBar:SetScale(db.focusCastScale)
+        BBF:SetScaleIf(FocusFrameSpellBar, db.focusCastScale)
         if db.cbFocusDetach then Detach(FocusFrameSpellBar, "Focus")
         elseif Target_Spellbar_AdjustPosition and FocusFrame and FocusFrame.spellbar then pcall(Target_Spellbar_AdjustPosition, FocusFrameSpellBar) end
     end
