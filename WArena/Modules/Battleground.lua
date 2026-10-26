@@ -77,7 +77,17 @@ local function ParseScore(i)
 	return name, kills or 0, deaths or 0, faction, race, classToken, damage or 0, healing or 0, spec
 end
 
-local function MyFactionIndex()
+-- my battleground side: taken from my own scoreboard entry (cross-faction battlegrounds put
+-- players on the other side), falling back to the character's faction
+local function MyFactionIndex(n)
+	local me = UnitName("player")
+	for i = 1, n do
+		local name, _, _, faction = ParseScore(i)
+		if name and ns:ShortName(name) == me and faction ~= nil then
+			myFactionIndex = faction
+			return faction
+		end
+	end
 	if myFactionIndex == nil then
 		myFactionIndex = (UnitFactionGroup("player") == "Alliance") and 1 or 0
 	end
@@ -89,10 +99,11 @@ function BG:UpdateFromScore()
 	local n = GetNumBattlefieldScores()
 	if not n or n == 0 then return end
 	local seen = {}
-	local mine = MyFactionIndex()
+	local mine = MyFactionIndex(n)
+	local me = UnitName("player")
 	for i = 1, n do
 		local name, kills, deaths, faction, race, class, damage, healing, spec = ParseScore(i)
-		if name and faction ~= nil and faction ~= mine then
+		if name and faction ~= nil and faction ~= mine and ns:ShortName(name) ~= me then
 			name = ns:ShortName(name)
 			local r = Record(name)
 			r.kills, r.deaths, r.damage, r.healing = kills, deaths, damage, healing
@@ -497,6 +508,7 @@ ns:RegisterEvents(function()
 end, "PLAYER_TARGET_CHANGED", "PLAYER_FOCUS_CHANGED", "UPDATE_MOUSEOVER_UNIT")
 
 ns:RegisterMessage("BG_ENTER", function()
+	ns.db.bgTest = false
 	for k in pairs(players) do players[k] = nil end
 	for k in pairs(guidToName) do guidToName[k] = nil end
 	friendlyFC, enemyFC, inCombatFrozen = nil, nil, false
@@ -508,7 +520,7 @@ ns:RegisterMessage("BG_LEAVE", function()
 	for k in pairs(players) do players[k] = nil end
 	friendlyFC, enemyFC = nil, nil
 	for i = 1, MAX_ROWS do ordered[i] = nil end
-	list:Hide()
+	ns:Defer(function() list:Hide() end)
 end)
 ns:RegisterMessage("COMBAT_ENDED", function()
 	if inCombatFrozen then
@@ -557,7 +569,7 @@ function BG:SetTest(on)
 		friendlyFC = "Me"
 	end
 	self:Rebuild()
-	if not on then list:Hide() end
+	if not on then ns:Defer(function() if not ns.db.bgTest and not ns.state.inBG then list:Hide() end end) end
 end
 
 ---------------------------------------------------------------------------
@@ -599,3 +611,12 @@ function BG:OnSettingChanged(key)
 end
 
 ns:AddCommand("bg", "toggle battleground list preview", function() BG:SetTest(not ns.db.bgTest) end)
+ns:AddCommand("bgdebug", "print raw scoreboard data (for bug reports)", function()
+	local n = GetNumBattlefieldScores()
+	ns:Print("scores: %d, my faction: %s (%s), enemies listed: %d", n or 0, tostring(myFactionIndex), tostring(UnitFactionGroup("player")), #ordered)
+	for i = 1, math.min(n or 0, 4) do
+		local a = { GetBattlefieldScore(i) }
+		for k = 1, #a do a[k] = tostring(a[k]) end
+		DEFAULT_CHAT_FRAME:AddMessage("  " .. i .. ": " .. table.concat(a, " | "))
+	end
+end)

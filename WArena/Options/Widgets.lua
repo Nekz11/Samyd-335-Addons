@@ -352,8 +352,10 @@ function W:Button(page, label, width, x, y, onClick, desc)
 end
 
 -- single-line edit box; onEnter(text) is called on Enter
+local ebCount = 0
 function W:EditBox(page, label, width, x, y, onEnter, desc)
-	local eb = CreateFrame("EditBox", nil, page, "InputBoxTemplate")
+	ebCount = ebCount + 1
+	local eb = CreateFrame("EditBox", "WArenaOpt_eb" .. ebCount, page, "InputBoxTemplate")
 	eb:SetPoint("TOPLEFT", x + 6, y - 14)
 	eb:SetWidth(width)
 	eb:SetHeight(22)
@@ -437,7 +439,7 @@ function W:NewPage(name, height)
 	local b = CreateFrame("Button", nil, nav)
 	b:SetHeight(22)
 	b:SetPoint("TOPLEFT", nav, "TOPLEFT", 4, -6 - (idx - 1) * 24)
-	b:SetPoint("RIGHT", nav, "RIGHT", -4, 0)
+	b:SetPoint("TOPRIGHT", nav, "TOPRIGHT", -4, -6 - (idx - 1) * 24)
 	b.bg = b:CreateTexture(nil, "BACKGROUND")
 	b.bg:SetAllPoints()
 	b.bg:SetTexture(1, 0.82, 0, 0.25)
@@ -494,7 +496,7 @@ function ns:OpenOptions(pageName)
 	if pageName then
 		local idx = W:PageByTitle(pageName)
 		if idx then W.page = idx end
-		win:Show()
+		if win:IsShown() then W:ShowPage(W.page or 1) else win:Show() end
 		return
 	end
 	if win:IsShown() then win:Hide() else win:Show() end

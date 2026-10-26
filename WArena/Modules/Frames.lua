@@ -46,7 +46,7 @@ ns:AddDefaults({
 ---------------------------------------------------------------------------
 -- state
 ---------------------------------------------------------------------------
-local frames, unitToFrame, guidToFrame, nameToFrame = {}, {}, {}, {}
+local frames, unitToFrame, guidToFrame, nameToFrame, petGuidToFrame = {}, {}, {}, {}, {}
 local elements, elementOrder = {}, {}
 local anchor = CreateFrame("Frame", "WArenaAnchor", UIParent)
 local hiddenParent = CreateFrame("Frame")
@@ -377,7 +377,7 @@ function Frames:UpdateAuras(f)
 			if ns.Lookup.drink[name] then drinking, drinkDur, drinkExp = true, duration, expires end
 			-- talent buffs/auras reveal the caster's spec (also when cast on a teammate)
 			local cf = caster and unitToFrame[caster]
-			if cf then self:TrySpec(cf, name) end
+			if cf and cf.kind == "arena" then self:TrySpec(cf, name) end
 			i = i + 1
 		end
 	end
@@ -422,6 +422,13 @@ function Frames:UpdatePet(f)
 	p.hp:SetMinMaxValues(0, maxhp)
 	p.hp:SetValue(hp)
 	p.name:SetText(UnitName(unit) or "")
+	-- pet casts (Spell Lock, Gnaw, Intimidation) count for the owner
+	local guid = UnitGUID(unit)
+	if guid and guid ~= f.petGUID then
+		if f.petGUID then petGuidToFrame[f.petGUID] = nil end
+		f.petGUID = guid
+		petGuidToFrame[guid] = f
+	end
 	if UnitIsDeadOrGhost(unit) then p.hp:SetValue(0) end
 	p:Show()
 end
@@ -443,6 +450,8 @@ function Frames:ResetFrame(f)
 	if f.name and nameToFrame[f.name] == f then nameToFrame[f.name] = nil end
 	f.guid, f.class, f.className, f.name, f.race, f.spec, f.role = nil, nil, nil, nil, nil, nil, nil
 	f.auraActive, f.isHealer, f.drinking, f.dead, f.hpPct, f.testTarget, f.unseen = nil, nil, nil, nil, nil, nil, nil
+	f.trinketReadyAt = nil
+	if f.petGUID then petGuidToFrame[f.petGUID] = nil; f.petGUID = nil end
 	self:UpdateName(f)
 	f.hpText:SetText("")
 	f.hp:SetMinMaxValues(0, 1)
@@ -754,7 +763,7 @@ local function DetectHealers(n)
 		local was = f.isHealer
 		f.isHealer = healer[i] or nil
 		ns:Show(f.roleIcon, f.isHealer and ns.db.healerIcon)
-		if f.isHealer and not was then ns:Fire("ENEMY_HEALER", f) end
+		if f.isHealer and not was and not ns.state.testMode then ns:Fire("ENEMY_HEALER", f) end
 	end
 	return healer
 end
@@ -778,28 +787,42 @@ local function ComputeOrder(n)
 	return order
 end
 
+-- room needed below / above a frame for elements that are permanently there (pet line, cast bar,
+-- party target icons). Dynamic rows (DR, cooldowns, totems, aura row) use the normal spacing.
+function Frames:StackExtents(cfg)
+	local below, above = 0, 0
+	if cfg.pets then below = below + (cfg.petHeight or 12) + 1 end
+	if cfg.castbar then
+		if cfg.castPos == "below" then below = below + cfg.castHeight + 4
+		elseif cfg.castPos == "above" then above = above + cfg.castHeight + 4 end
+	end
+	if cfg.indPartyTargets then above = mmax(above, (cfg.indIconSize or 14) + 2) end
+	return below, above
+end
+
 function Frames:OnLayout()
 	local db = ns.db
 	for i = 1, MAX do frames[i].slot = i end
 	for slot, id in ipairs(ComputeOrder(self:Count())) do frames[id].slot = slot end
 	local W, H, S = db.width, db.height, db.spacing
+	local below, above = self:StackExtents(db)
+	local step = H + S + (db.horizontal and 0 or (below + above))
 	anchor:SetScale(db.scale)
 	ns:SetPointFromTable(anchor, db.point)
 	if db.horizontal then
 		ns:Size(anchor, 3 * W + 2 * S, H)
 	else
-		ns:Size(anchor, W, 3 * H + 2 * S)
+		ns:Size(anchor, W, 3 * step - S)
 	end
 	for i = 1, MAX do
 		local f = frames[i]
 		f:ClearAllPoints()
-		local off = (f.slot - 1) * ((db.horizontal and W or H) + S)
 		if db.horizontal then
-			f:SetPoint("TOPLEFT", anchor, "TOPLEFT", off, 0)
+			f:SetPoint("TOPLEFT", anchor, "TOPLEFT", (f.slot - 1) * (W + S), 0)
 		elseif db.growUp then
-			f:SetPoint("BOTTOMLEFT", anchor, "BOTTOMLEFT", 0, off)
+			f:SetPoint("BOTTOMLEFT", anchor, "BOTTOMLEFT", 0, (f.slot - 1) * step + below)
 		else
-			f:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, -off)
+			f:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, -((f.slot - 1) * step + above))
 		end
 		self:LayoutFrame(f)
 	end
@@ -967,6 +990,13 @@ ns:RegisterMessage("ARENA_LEAVE", function()
 	for i = 1, MAX do Frames:ResetFrame(frames[i]) end
 	Frames:ShowFrames(ns.state.testMode and 3 or 0)
 end)
+-- a real battleground (or anything else) ends the test frames
+ns:RegisterMessage("TEST_MODE", function(_, on)
+	if not on and not ns.state.inArena and frames[1] then
+		for i = 1, MAX do Frames:ResetFrame(frames[i]) end
+		Frames:ShowFrames(0)
+	end
+end)
 
 ---------------------------------------------------------------------------
 -- events
@@ -1072,14 +1102,14 @@ end, "UNIT_HEALTH", "UNIT_MAXHEALTH")
 -- 3.3.5 signature: timestamp, event, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellId, spellName, school, ...
 ns:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", function(_, _, sub, srcGUID, srcName, _, dstGUID, dstName, _, spellId, spellName, _, extra1, extra2, extra3)
 	if ns.state.testMode then return end
-	local sf = srcGUID and guidToFrame[srcGUID]
+	local sf = srcGUID and (guidToFrame[srcGUID] or petGuidToFrame[srcGUID])
 	local df = dstGUID and guidToFrame[dstGUID]
 	if not sf and not df then
 		if ns.state.inBG then ns:Fire("CLEU_BG", sub, srcGUID, srcName, dstGUID, dstName, spellId, spellName, extra1, extra2, extra3) end
 		return
 	end
 	if sf and spellName then
-		if sub ~= "SPELL_AURA_REMOVED" then Frames:TrySpec(sf, spellName) end
+		if sub ~= "SPELL_AURA_REMOVED" and sf.kind == "arena" then Frames:TrySpec(sf, spellName) end
 		if sub == "SPELL_CAST_SUCCESS" then
 			local now = GetTime()
 			if ns.Lookup.trinket[spellName] then
@@ -1103,7 +1133,6 @@ ns:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", function(_, _, sub, srcGUID, src
 				end
 				ns:Fire("ENEMY_RACIAL", sf, spellName)
 			end
-			if ns.Lookup.resurrect[spellName] then ns:Fire("ENEMY_RESURRECT", sf, dstName, spellName) end
 		elseif sub == "SPELL_CAST_START" then
 			if ns.Lookup.resurrect[spellName] then ns:Fire("ENEMY_RESURRECT", sf, dstName, spellName) end
 		end

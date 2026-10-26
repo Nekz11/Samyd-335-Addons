@@ -54,7 +54,12 @@ Key bindings (options window, test mode, lock) are in the game's Key Bindings me
   dispel type icons; optional sound when you can dispel something
 - Priority debuffs (ICC, ToC, Ulduar, Naxxramas encounter debuffs) are shown larger and first;
   debuff blacklist / whitelist and buff whitelist with spell ids
-- Buffs: like retail only your own HoTs and shields (Earth Shield, Beacon of Light etc. always)
+- Debuff filter: "Important only" (default: dispellable, crowd control, silences, roots, healing
+  reduction, raid debuffs, whitelist), "Only dispellable" or "Everything"
+- Buff filter: "Important + my own" (default: externals, shields, HoTs, immunities and big cooldowns
+  from anyone plus your own short buffs), "All short buffs" or "Whitelist only"
+- Remaining time on every buff / debuff icon (seconds, minutes above 60 s, red in the last 5 s),
+  optionally only below a threshold
 
 ### Indicators
 - Small colored squares in the frame corners for your own HoTs and shields with remaining time and

@@ -165,15 +165,16 @@ function Boss:OnLayout()
 	anchor:SetScale(cfg.scale)
 	ns:SetPointFromTable(anchor, db.boss_point)
 	local W, H, S = cfg.width, cfg.height, cfg.spacing
-	ns:Size(anchor, W, 2 * H + S)
+	local below, above = ns.Frames:StackExtents(cfg)
+	local step = H + S + below + above
+	ns:Size(anchor, W, 2 * step - S)
 	for i = 1, MAXB do
 		local f = frames[i]
 		f:ClearAllPoints()
-		local off = (i - 1) * (H + S)
 		if cfg.growUp then
-			f:SetPoint("BOTTOMLEFT", anchor, "BOTTOMLEFT", 0, off)
+			f:SetPoint("BOTTOMLEFT", anchor, "BOTTOMLEFT", 0, (i - 1) * step + below)
 		else
-			f:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, -off)
+			f:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, -((i - 1) * step + above))
 		end
 		ns.Frames:LayoutFrame(f)
 	end
@@ -228,7 +229,7 @@ local function UnitEvent(method)
 	end
 end
 ns:RegisterEvents(UnitEvent("UpdateHealth"), "UNIT_HEALTH", "UNIT_MAXHEALTH")
-ns:RegisterEvents(UnitEvent("UpdatePower"), "UNIT_MANA", "UNIT_RAGE", "UNIT_ENERGY", "UNIT_RUNIC_POWER", "UNIT_MAXMANA", "UNIT_DISPLAYPOWER", "UNIT_MAXHEALTH")
+ns:RegisterEvents(UnitEvent("UpdatePower"), "UNIT_MANA", "UNIT_RAGE", "UNIT_ENERGY", "UNIT_RUNIC_POWER", "UNIT_MAXMANA", "UNIT_MAXRAGE", "UNIT_MAXENERGY", "UNIT_MAXRUNIC_POWER", "UNIT_DISPLAYPOWER")
 ns:RegisterEvent("UNIT_AURA", UnitEvent("UpdateAuras"))
 ns:RegisterEvent("UNIT_NAME_UPDATE", UnitEvent("UpdateIdentity"))
 ns:RegisterEvents(UnitEvent("UpdateCast"), "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_DELAYED", "UNIT_SPELLCAST_CHANNEL_START",

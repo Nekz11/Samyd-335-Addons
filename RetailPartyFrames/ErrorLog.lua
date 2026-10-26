@@ -28,8 +28,11 @@ end
 local function Record(msg)
     msg = tostring(msg)
     local ours = string.find(msg, "RetailPartyFrames", 1, true) and true or false
-    local stack = debugstack and debugstack(3, 12, 0) or ""
-    if not ours and string.find(stack, "RetailPartyFrames", 1, true) then ours = true end
+    local stack = debugstack and debugstack(4, 12, 0) or ""
+    -- our own handler frames do not count
+    local stripped = string.gsub(stack, "[^\n]*ErrorLog%.lua[^\n]*\n?", "")
+    if not ours and string.find(stripped, "RetailPartyFrames", 1, true) then ours = true end
+    stack = stripped
     Store({
         msg = msg,
         stack = stack,
@@ -47,12 +50,21 @@ local function Record(msg)
     end
 end
 
--- chain into the existing error handler (Blizzard's or BugGrabber's)
+-- chain into the existing error handler (Blizzard's or BugGrabber's).
+-- Re-entrancy guard: when the error *display* itself throws (3.3.5's ScriptErrorsFrame does that with
+-- "cursorOffset" errors), Blizzard's handler would call itself until the C stack overflows.
 local original = geterrorhandler and geterrorhandler()
+local inHandler = false
 if seterrorhandler then
     seterrorhandler(function(msg)
+        if inHandler then
+            pcall(Record, msg)
+            return
+        end
+        inHandler = true
         pcall(Record, msg)
-        if original then return original(msg) end
+        if original then pcall(original, msg) end
+        inHandler = false
     end)
 end
 

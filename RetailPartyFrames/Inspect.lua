@@ -12,6 +12,8 @@ local REINSPECT_AFTER = 600 -- refresh everyone every 10 minutes
 
 local pending          -- { unit = "party1", guid = ..., at = time }
 local lastRequest = 0
+local lastNotifyGUID   -- who was inspected last, by anyone (we hook NotifyInspect)
+local retries = {}     -- guid -> failed attempts
 local inspected = {}   -- guid -> time of last successful inspection
 local queued = {}      -- guid -> unit
 
@@ -167,18 +169,31 @@ local function BlizzardInspectOpen()
     return InspectFrame and InspectFrame:IsShown()
 end
 
+local MAX_RETRIES = 3
+
+local function Requeue(p)
+    retries[p.guid] = (retries[p.guid] or 0) + 1
+    if retries[p.guid] <= MAX_RETRIES then
+        queued[p.guid] = p.unit
+    else
+        -- give up for this session; usage based detection still works
+        inspected[p.guid] = GetTime()
+    end
+end
+
 local function Tick()
     if not ns.db or not ns.db.cooldowns or not ns.db.cdInspect then return end
     local now = GetTime()
     if pending then
         if now - pending.at > INSPECT_TIMEOUT then
-            -- give up on this one for now, try again later
-            queued[pending.guid] = pending.unit
+            Requeue(pending)
             pending = nil
         end
         return
     end
-    if now - lastRequest < INSPECT_INTERVAL or BlizzardInspectOpen() then return end
+    local interval = INSPECT_INTERVAL
+    if LibStub and LibStub("LibGroupTalents-1.0", true) then interval = 6 end -- share the inspect channel politely
+    if now - lastRequest < interval or BlizzardInspectOpen() then return end
     for guid, unit in pairs(queued) do
         if UnitGUID(unit) ~= guid then
             queued[guid] = nil
@@ -186,6 +201,7 @@ local function Tick()
             queued[guid] = nil
             pending = { unit = unit, guid = guid, at = now }
             lastRequest = now
+            lastNotifyGUID = guid
             NotifyInspect(unit)
             return
         end
@@ -201,21 +217,40 @@ ticker:SetScript("OnUpdate", function(_, elapsed)
     Tick()
 end)
 
+-- INSPECT_TALENT_READY carries no unit: remember who was asked for last, by any addon
+if hooksecurefunc and NotifyInspect then
+    hooksecurefunc("NotifyInspect", function(unit)
+        local guid = unit and UnitGUID(unit)
+        if guid then lastNotifyGUID = guid end
+        -- somebody else inspected in between: our pending request is no longer reliable
+        if pending and guid ~= pending.guid then
+            Requeue(pending)
+            pending = nil
+        end
+    end)
+end
+
 local function OnInspectReady()
     if not pending then return end
     local p = pending
     pending = nil
     if UnitGUID(p.unit) ~= p.guid then return end
+    if lastNotifyGUID ~= p.guid then
+        Requeue(p) -- the data belongs to someone else's inspection
+        return
+    end
     local _, class = UnitClass(p.unit)
     if not class then return end
     local talents, glyphs = ReadTalents(true)
     if next(talents) then
+        retries[p.guid] = nil
         ns:ApplyInspection(p.guid, class, talents, glyphs)
     else
-        -- empty result: unit probably out of range after all, retry later
-        queued[p.guid] = p.unit
+        -- empty result (out of range after all, or cleared by another addon): retry a few times
+        Requeue(p)
     end
-    if ClearInspectPlayer and not BlizzardInspectOpen() then ClearInspectPlayer() end
+    -- do not call ClearInspectPlayer(): other addons (LibGroupTalents in Details!, oRA3) track the
+    -- inspected unit themselves and break when the target is cleared under them
 end
 
 ns:On("INSPECT_TALENT_READY", OnInspectReady) -- 3.3.5

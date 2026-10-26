@@ -1,5 +1,33 @@
 BetterPlates - Changelog
 
+2.0.2
+- Client nameplate spreading: Blizzard's own "Allow overlapping nameplates" is now exposed
+  (General > Layout, Blizzard page, zone rules). Off = the client keeps plates apart incl.
+  the click area - recommended over the addon's visual stacking. PvE Raid preset uses it.
+- Fixed: "Raid" bar texture did not exist on 3.3.5a (replaced by "Skills")
+- Fixed: emphasized cast lost its height/color after a target or size change
+- Fixed: emphasize/hide cast lists on the target's Blizzard bar required "Spell name" on
+- Fixed: custom raid NPC list applied only after the plate was re-shown
+- Fixed: combat-log cast bar appeared one tick late on first GUID match
+- Bindings.xml removed from the TOC (auto-loaded), unsupported attribute removed
+- Removed a client cast bar checkbox that has no effect on 3.3.5a
+- Test suite: 446 checks incl. arena, battleground, raid, profile switch and 60-plate reuse scenarios
+
+2.0.1
+- Combat-log cast bars end when a cast is cancelled (unit events for target/focus/arena/party,
+  per-tick verification, melee swings, next hard cast); hasted durations from the client
+- Bar color by crowd control no longer reacts to buffs (turquoise bars)
+- Zone rules: client CVars are restored when leaving the zone; first zone applied on login
+- Fixed: target glow could stick to a plate after target change / plate reuse
+- Fixed: DR entries without a removal event never expired; DR state cleared on zone change
+- Fixed: a new cast of the same unit could keep the old name/icon/duration
+- Fixed: changing options during a combat-log cast hid the bar until the next cast
+- Fixed: key auras (bigger icons) raised an error; aura pool reuse could show wrong stacks
+- Fixed: profile delete switched profiles before confirming; import validates sub-tables and zones
+- Fixed: "targeted by" counted yourself in raids; search results closed while typing
+- Options: "Color bar by crowd control" is back (Colors page); refresh is batched (less stutter)
+- Per-plate error guard: errors are caught, shown once and listed under /bbp errors
+
 2.0.0
 - Quick-setup presets "PvP Arena" and "PvE Raid" (settings + zone rules + cast lists)
 - Profiles (per character), zone rules (Open World / Dungeon / Raid / BG / Arena), import/export

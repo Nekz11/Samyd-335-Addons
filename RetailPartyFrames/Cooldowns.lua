@@ -118,6 +118,53 @@ ns:On("UNIT_PET", function()
 end)
 
 ------------------------------------------------------------------------
+-- Arena / battleground: the server resets every cooldown when a match is entered (preparation buff)
+------------------------------------------------------------------------
+function ns:ResetAllCooldowns(reason)
+    local any = next(state) ~= nil
+    for guid in pairs(state) do state[guid] = nil end
+    if any then
+        self:ForEachButton(function(b) self:UpdateCooldownIcons(b) end)
+        if reason then self:Print("Cooldowns reset (" .. reason .. ").") end
+    end
+end
+
+local PREP_AURAS = { [32727] = true, [32728] = true, [44521] = true } -- Arena Preparation (Alliance / Horde), Battleground Preparation
+local prepSeen = false
+
+local function HasPrepAura()
+    for i = 1, 40 do
+        local name, _, _, _, _, _, _, _, _, _, spellId = UnitAura("player", i, "HELPFUL")
+        if not name then return false end
+        if spellId and PREP_AURAS[spellId] then return true end
+    end
+    return false
+end
+
+local lastType
+ns:RegisterCallback("GROUP_TYPE_CHANGED", function(gtype)
+    if gtype == lastType then return end -- forced re-fires (options, /reload) are not a new match
+    lastType = gtype
+    if gtype == "arena" then
+        ns:ResetAllCooldowns("new arena")
+        prepSeen = HasPrepAura()
+    elseif gtype == "bg" then
+        ns:ResetAllCooldowns("new battleground")
+        prepSeen = HasPrepAura()
+    else
+        prepSeen = false
+    end
+end)
+
+-- belt and braces: the preparation buff appearing again means a new match
+ns:On("UNIT_AURA", function(_, unit)
+    if unit ~= "player" or not (ns.inArena or ns.inBattleground) then return end
+    local has = HasPrepAura()
+    if has and not prepSeen then ns:ResetAllCooldowns("arena preparation") end
+    prepSeen = has
+end)
+
+------------------------------------------------------------------------
 -- Icons
 ------------------------------------------------------------------------
 local function IconOnEnter(self)
@@ -233,6 +280,7 @@ local list = {}
 local function Consider(e, db, now, st, sn, race)
     if not db.cdCategories[e.cat] then return end
     if db.cdHidden[e.id] then return end
+    if (e.prio or 2) > (db.cdPriority or 3) then return end
     if e.race and e.race ~= race then return end
     -- talents: known from inspection; usage-only spells (pet, trinket): known after first use
     if (e.talent or e.usage) and not (sn and sn[e.id]) then return end

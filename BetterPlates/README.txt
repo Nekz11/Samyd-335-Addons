@@ -1,4 +1,4 @@
-BetterPlates 2.0.0 - WoW 3.3.5a (Warmane)
+BetterPlates 2.0.2 - WoW 3.3.5a (Warmane)
 Enhanced Blizzard nameplates for WotLK 3.3.5a, inspired by BetterBlizzPlates.
 Author: Samyd @ Blackrock
 

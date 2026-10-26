@@ -151,23 +151,6 @@ local PVP_AURAS = {
 	[31884] = "buff",    -- Zornige Vergeltung
 }
 
--- Lockout-Dauer je Unterbrechungszauber (Sekunden)
-ns.LOCKOUTS = {
-	[1766] = 5,   -- Tritt
-	[2139] = 8,   -- Gegenzauber
-	[6552] = 4,   -- Zuschlagen
-	[72] = 6,     -- Schildhieb
-	[47528] = 4,  -- Gedankenfrost
-	[57994] = 2,  -- Windstoß
-	[19244] = 5,  -- Zaubersperre (Rang 1)
-	[19647] = 6,  -- Zaubersperre (Rang 2)
-	[34490] = 3,  -- Unterdrückender Schuss
-	[47476] = 5,  -- Strangulieren
-	[15487] = 5,  -- Stille
-	[26679] = 3,  -- Tödlicher Wurf (Glyphe)
-	[25046] = 2,  -- Arkaner Strom
-}
-
 ns.AURA_PRIO = { immune = 1, stun = 2, cc = 3, custom = 3.5, silence = 4, disarm = 5, root = 6, buff = 7 }
 ns.AURA_COLORS = {
 	immune = { 1.00, 0.85, 0.00 },

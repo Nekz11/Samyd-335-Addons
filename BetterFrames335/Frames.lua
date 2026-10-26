@@ -317,6 +317,14 @@ local function SnapBar(bar)
     smoothBars[bar] = nil
 end
 
+-- Blizzard calls SetMinMaxValues(0, max) on every UNIT_HEALTH update; only snap when the range really changed
+local function MinMaxChanged(bar, minv, maxv)
+    if bar.bbfMin ~= minv or bar.bbfMax ~= maxv then
+        bar.bbfMin, bar.bbfMax = minv, maxv
+        SnapBar(bar)
+    end
+end
+
 local function SmoothSetValue(bar, value)
     if not db or not db.smoothBars or bar.bbfBypass then return end
     local shown = bar.bbfShown
@@ -345,7 +353,7 @@ local function HookSmooth(bar)
         rawSetValue = mt and mt.__index and mt.__index.SetValue
     end
     hooksecurefunc(bar, "SetValue", SmoothSetValue)
-    hooksecurefunc(bar, "SetMinMaxValues", SnapBar)
+    hooksecurefunc(bar, "SetMinMaxValues", MinMaxChanged)
 end
 
 local function SmoothDriver(_, elapsed)
@@ -494,7 +502,7 @@ function M:Apply()
         for _, n in ipairs(healthBarNames) do
             local bar = _G[n]
             if bar and type(bar.unit) == "string" and UnitExists(bar.unit) then
-                HealthBar_OnValueChanged(bar, bar:GetValue())
+                HealthBar_OnValueChanged(bar, bar:GetValue(), true)
             end
         end
     end

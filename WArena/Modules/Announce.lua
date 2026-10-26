@@ -195,7 +195,7 @@ ns:RegisterMessage("ENEMY_HEALER", function(_, f)
 	Ann:Send("healer", format(L["ANN_HEALER"], Label(f, "healer"), f.spec or f.className or "?"), f.id)
 end)
 ns:RegisterMessage("ENEMY_INTERRUPTED", function(_, f, srcName, spell)
-	if srcName and UnitName("player") == srcName then
+	if f.kind == "arena" and srcName and UnitName("player") == srcName then
 		Ann:Send("interrupt", format("Interrupted %s's %s", PlainLabel(f), spell or "cast"), f.id)
 	end
 end)

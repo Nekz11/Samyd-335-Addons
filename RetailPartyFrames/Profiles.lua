@@ -13,6 +13,15 @@ local function IsOldFlatDB(db)
 end
 
 local function PrepareProfile(p)
+    -- 2.0.x -> 2.1: boolean filters became modes
+    if p.debuffFilter == nil and p.onlyDispellable ~= nil then
+        p.debuffFilter = p.onlyDispellable and "DISPELLABLE" or "IMPORTANT"
+    end
+    p.onlyDispellable = nil
+    if p.buffFilter == nil and p.buffWhitelistOnly ~= nil then
+        p.buffFilter = p.buffWhitelistOnly and "WHITELIST" or "IMPORTANT"
+    end
+    p.buffWhitelistOnly = nil
     ns.CopyDefaults(ns.defaults, p)
     if type(p.point) ~= "table" or #p.point < 4 then p.point = ns.DeepCopy(ns.defaults.point) end
     if type(p.raidPoint) ~= "table" or #p.raidPoint < 4 then p.raidPoint = ns.DeepCopy(ns.defaults.raidPoint) end
@@ -129,6 +138,9 @@ end
 function ns:DeleteProfile(name)
     if name == self.activeProfile or not self:ProfileExists(name) then return false end
     self.global.profiles[name] = nil
+    for k, v in pairs(self.global.autoProfiles) do
+        if v == name then self.global.autoProfiles[k] = "" end
+    end
     if name == self.activeProfile then return false end
     -- characters that used it fall back to the default / first profile
     for key, pname in pairs(self.global.profileKeys) do
@@ -155,6 +167,7 @@ function ns:ApplyProfile()
     self:RebuildSpellIndex()
     self:Fire("PROFILE_CHANGED")
     if self.RefreshAll then self:RefreshAll() end
+    if self.SyncMovers then self:SyncMovers() end
     if self.RefreshOptions then self:RefreshOptions(true) end
 end
 

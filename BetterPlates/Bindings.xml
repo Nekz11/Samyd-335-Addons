@@ -1,20 +1,20 @@
 <Bindings>
-	<Binding name="BETTERPLATES_FRIENDS" header="BETTERPLATES" category="BetterPlates">
+	<Binding name="BETTERPLATES_FRIENDS" header="BETTERPLATES">
 		BetterPlates_ToggleFriends()
 	</Binding>
-	<Binding name="BETTERPLATES_ENEMIES" category="BetterPlates">
+	<Binding name="BETTERPLATES_ENEMIES">
 		BetterPlates_ToggleEnemies()
 	</Binding>
-	<Binding name="BETTERPLATES_STACKING" category="BetterPlates">
+	<Binding name="BETTERPLATES_STACKING">
 		BetterPlates_ToggleStacking()
 	</Binding>
-	<Binding name="BETTERPLATES_OPTIONS" category="BetterPlates">
+	<Binding name="BETTERPLATES_OPTIONS">
 		BetterPlates_Options()
 	</Binding>
-	<Binding name="BETTERPLATES_ALL" category="BetterPlates">
+	<Binding name="BETTERPLATES_ALL">
 		BetterPlates_ToggleAll()
 	</Binding>
-	<Binding name="BETTERPLATES_TEST" category="BetterPlates">
+	<Binding name="BETTERPLATES_TEST">
 		BetterPlates_Test()
 	</Binding>
 </Bindings>

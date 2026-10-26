@@ -128,6 +128,18 @@ local function OnDragStop(ov)
     ov.dragging = nil
     local e, f = ov.entry, Frame(ov.entry)
     if not f then return end
+    if Protected(f) then
+        -- combat started mid-drag: the frame is locked now; keep what the client already applied
+        BBF:Print("combat started - " .. e.label .. " position will be saved after combat")
+        BBF:RunOOC("movesave_" .. e.key, function()
+            f:StopMovingOrSizing()
+            if f.SetUserPlaced then pcall(f.SetUserPlaced, f, false) end
+            Save(e, f)
+            local pos = db.positions[e.key]
+            if pos then SetFrom(f, pos); AfterMove(e, f) end
+        end)
+        return
+    end
     f:StopMovingOrSizing()
     if f.SetUserPlaced then pcall(f.SetUserPlaced, f, false) end   -- we store positions ourselves
     Save(e, f)

@@ -79,7 +79,7 @@ function Ind:UpdateEnemyTarget(f)
 	else
 		f.targetText:Hide()
 	end
-	if tyou ~= f.wasTargetingYou then
+	if tyou ~= (f.wasTargetingYou or false) then
 		f.wasTargetingYou = tyou
 		ns:Fire("ENEMY_TARGETING_YOU", f, tyou)
 	end

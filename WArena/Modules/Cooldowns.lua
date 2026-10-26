@@ -7,7 +7,7 @@ local floor, mmax, mmin, tsort = math.floor, math.max, math.min, table.sort
 local GetTime = GetTime
 
 ns:AddDefaults({
-	cooldowns = true, cdSize = 70, cdPos = "below", cdMax = 8, cdShowReady = true, cdReadyAlpha = 0.45,
+	cooldowns = true, cdSize = 70, cdPos = "right", cdMax = 8, cdShowReady = true, cdReadyAlpha = 0.45,
 	cdGlow = true, cdSpacing = 2, cdUsageFlash = 5,
 	cdInterrupt = true, cdDefensive = true, cdExternal = true, cdOffensive = true, cdCc = true, cdUtility = false, cdHeal = true,
 })

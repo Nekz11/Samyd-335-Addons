@@ -50,16 +50,31 @@ function W.GetValue(path)
 	return db[path]
 end
 
+-- Plaketten höchstens alle 0,1 s neu aufbauen (Slider/Farbwähler feuern sehr oft)
+local refreshFrame = CreateFrame("Frame")
+refreshFrame:Hide()
+refreshFrame:SetScript("OnUpdate", function(self, elapsed)
+	self.t = (self.t or 0) + elapsed
+	if self.t >= 0.1 then
+		self.t = 0
+		self:Hide()
+		if ns.Plates and ns.db then ns.Plates:RefreshAll() end
+	end
+end)
+function W.Refresh()
+	refreshFrame:Show()
+end
+
 function W.SetValue(path, v)
 	local a, b = Split(path)
 	if a then
 		local t = ns.db and ns.db[a]
 		if type(t) == "table" then t[b] = v end
 		-- Profil teilt die Untertabelle, daher nichts weiter nötig
-		if ns.Refresh then ns:Refresh() end
 	else
-		ns:Set(path, v)
+		ns:Set(path, v, true)
 	end
+	W.Refresh()
 end
 
 ----------------------------------------------------------------
@@ -192,9 +207,8 @@ function W.Check(page, col, label, key, tip, getter, setter)
 	end
 	cb:SetScript("OnClick", function(self)
 		local v = self:GetChecked() and true or false
-		if setter then setter(v) else W.SetValue(key, v) end
+		if setter then setter(v) W.Refresh() else W.SetValue(key, v) end
 		PlaySound(v and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
-		if ns.Refresh then ns:Refresh() end
 	end)
 	Register(page, cb, label)
 	return cb
@@ -282,9 +296,12 @@ local function GetMenu()
 	menu:EnableMouse(true)
 	menu.rows = {}
 	menu:Hide()
+	menu:SetClampedToScreen(true)
 	menu:SetScript("OnUpdate", function(self)
-		-- schließen, wenn die Maus das Menü verlässt
-		if not self:IsMouseOver(8, -8, -8, 8) and not (self.owner and self.owner:IsMouseOver()) then
+		-- schließen, wenn die Maus das Menü verlässt (nicht, solange das Suchfeld den Fokus hat)
+		local owner = self.owner
+		if owner and owner.HasFocus and owner:HasFocus() then self.away = 0 return end
+		if not self:IsMouseOver(8, -8, -8, 8) and not (owner and owner:IsMouseOver()) then
 			self.away = (self.away or 0) + 1
 			if self.away > 20 then self:Hide() end
 		else
@@ -417,7 +434,7 @@ function W.Color(page, col, label, path, tip)
 		if type(c) ~= "table" then return end
 		c[1], c[2], c[3] = r, g, bl
 		b:Refresh()
-		if ns.Refresh then ns:Refresh() end
+		W.Refresh()
 	end
 	b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	b:SetScript("OnClick", function(self, button)
@@ -465,8 +482,7 @@ function W.EditLine(page, col, label, key, tip, onSave)
 		local v = self:GetText() or ""
 		if W.GetValue(key) ~= v then
 			W.SetValue(key, v)
-			if onSave then onSave(v) end
-			if ns.Refresh then ns:Refresh() end
+			if onSave then onSave(v) W.Refresh() end
 		end
 	end
 	box:SetScript("OnEnterPressed", function(self) Save(self) self:ClearFocus() end)

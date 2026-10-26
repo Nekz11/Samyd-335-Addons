@@ -56,14 +56,14 @@ add("PALADIN", 6940, 120, "external", { active = 12 })                          
 add("PALADIN", 48788, 1200, "heal", { ids = { 633, 2800, 10310, 27154, 48788 } }) -- Lay on Hands
 add("PALADIN", 31821, 120, "external", { talent = true, active = 6 })           -- Aura Mastery
 add("PALADIN", 64205, 120, "external", { talent = true, active = 10 })          -- Divine Sacrifice
-add("PALADIN", 1044, 25, "utility", { active = 6 })                             -- Hand of Freedom
+add("PALADIN", 1044, 25, "utility", { active = 10 })                            -- Hand of Freedom
 add("PALADIN", 10308, 60, "cc", { ids = { 853, 5588, 5589, 10308 } })           -- Hammer of Justice
 add("PALADIN", 20066, 60, "cc", { talent = true })                              -- Repentance
 add("PALADIN", 31884, 180, "offensive", { active = 20 })                        -- Avenging Wrath
 add("PALADIN", 31842, 180, "heal", { talent = true, active = 15 })              -- Divine Illumination
 add("PALADIN", 20216, 120, "heal", { talent = true })                           -- Divine Favor
 add("PALADIN", 54428, 60, "heal")                                               -- Divine Plea
-add("PALADIN", 10326, 15, "cc")                                                 -- Turn Evil
+add("PALADIN", 10326, 30, "cc")                                                 -- Turn Evil
 add("PALADIN", 31935, 30, "utility", { talent = true, ids = { 31935, 32699, 32700, 48826, 48827 } }) -- Avenger's Shield
 
 -- DEATH KNIGHT
@@ -84,7 +84,7 @@ add("DEATHKNIGHT", 48982, 30, "defensive", { talent = true })                   
 add("DEATHKNIGHT", 48743, 120, "defensive")                                     -- Death Pact
 add("DEATHKNIGHT", 49203, 60, "cc", { talent = true })                          -- Hungering Cold
 add("DEATHKNIGHT", 47481, 60, "cc")                                             -- Gnaw (ghoul)
-add("DEATHKNIGHT", 47568, 300, "offensive", { active = 20 })                    -- Empower Rune Weapon
+add("DEATHKNIGHT", 47568, 300, "offensive")                                     -- Empower Rune Weapon
 
 -- DRUID
 add("DRUID", 16979, 15, "interrupt", { talent = true, ids = { 16979, 49376 } }) -- Feral Charge
@@ -100,7 +100,7 @@ add("DRUID", 53201, 90, "offensive", { talent = true, ids = { 48505, 53199, 5320
 add("DRUID", 33831, 180, "offensive", { talent = true })                        -- Force of Nature
 add("DRUID", 53312, 60, "utility", { ids = { 16689, 16810, 16811, 16812, 16813, 17329, 27009, 53312 } }) -- Nature's Grasp
 add("DRUID", 50516, 20, "cc", { talent = true, ids = { 50516, 53223, 53225, 53226, 61384 } }) -- Typhoon
-add("DRUID", 33786, 6, "cc", { ids = { 33786 } })                               -- Cyclone (6 s is the GCD-ish repeat; used only to show usage)
+add("DRUID", 33786, 0, "cc", { usage = true })                                  -- Cyclone (no cooldown; shown as used)
 add("DRUID", 1850, 180, "utility", { ids = { 1850, 9821 } })                    -- Dash
 add("DRUID", 22570, 10, "cc", { ids = { 22570, 49802 } })                       -- Maim
 
@@ -117,7 +117,7 @@ add("HUNTER", 19574, 120, "offensive", { talent = true, active = 18 })          
 add("HUNTER", 49012, 60, "cc", { talent = true, ids = { 19386, 24132, 24133, 27068, 49011, 49012 } }) -- Wyvern Sting
 add("HUNTER", 19577, 60, "cc", { talent = true })                               -- Intimidation
 add("HUNTER", 781, 25, "utility")                                               -- Disengage
-add("HUNTER", 13809, 30, "cc", { ids = { 13809, 14316, 14317, 27023, 49055, 49056 } }) -- Frost Trap / Snake Trap-ish
+add("HUNTER", 13809, 30, "cc")                                                  -- Frost Trap
 add("HUNTER", 34477, 30, "utility")                                             -- Misdirection
 
 -- MAGE
@@ -153,7 +153,7 @@ add("PRIEST", 10890, 30, "cc", { ids = { 8122, 8124, 10888, 10890 } })          
 add("PRIEST", 64044, 120, "cc", { talent = true })                              -- Psychic Horror
 add("PRIEST", 10060, 120, "offensive", { talent = true, active = 15 })          -- Power Infusion
 add("PRIEST", 14751, 180, "heal", { talent = true })                            -- Inner Focus
-add("PRIEST", 47540, 10, "heal", { talent = true, ids = { 47540, 53005, 53006, 53007 } }) -- Penance
+add("PRIEST", 47540, 12, "heal", { talent = true, ids = { 47540, 53005, 53006, 53007 } }) -- Penance
 add("PRIEST", 724, 180, "heal", { talent = true, ids = { 724, 27870, 27871, 28275, 48086, 48087 } }) -- Lightwell
 
 -- ROGUE
@@ -187,7 +187,7 @@ add("SHAMAN", 59159, 45, "cc", { talent = true, ids = { 51490, 59156, 59158, 591
 add("SHAMAN", 2894, 600, "offensive")                                           -- Fire Elemental Totem
 add("SHAMAN", 51533, 180, "offensive", { talent = true, active = 45 })          -- Feral Spirit
 add("SHAMAN", 16166, 180, "offensive", { talent = true })                       -- Elemental Mastery
-add("SHAMAN", 8143, 60, "utility", { ids = { 8143 } })                          -- Tremor Totem (no CD; usage)
+add("SHAMAN", 8143, 0, "utility", { usage = true })                            -- Tremor Totem (no cooldown; shown as used)
 add("SHAMAN", 61295, 6, "heal", { talent = true, ids = { 61295, 61299, 61300, 61301 } }) -- Riptide
 
 -- WARLOCK

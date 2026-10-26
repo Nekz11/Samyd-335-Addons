@@ -1,6 +1,35 @@
 WArena – changelog
 ==================
 
+2.0.6
+- Spacing: vertical room is only reserved for the pet line and a cast bar below/above; cooldown and totem rows
+  default to the right of the frame (existing profiles are migrated)
+
+2.0.5 (second review: logic & data)
+- Spec detection: removed baseline spells that mislabeled specs/healers (Regrowth, Avenging Wrath, Omen of
+  Clarity, Shred, Tiger's Fury, Slice and Dice, Life Tap, Arcane Blast, Penance heal effect, Unbreakable
+  Armor under Unholy); Ghostly Strike -> Subtlety, Bone Shield -> Unholy, Omen of Clarity -> Restoration
+- DR lists: Ravage moved to stuns, Venom Web Spray IDs fixed, Frost Trap Aura / random stuns and roots
+  (Revenge, Mace Stun, Entrapment, Shattered Barrier, Frostbite) no longer counted
+- Cooldowns: Frost Trap no longer includes fire traps, Tremor Totem and Cyclone shown as "used" without a
+  fake cooldown, Turn Evil 30 s, Penance 12 s, Hand of Freedom 10 s, ERW without glow; fire totems 60 s
+- Test frames end when a battleground starts; resurrect announced once; no spec/healer/interrupt noise
+  from boss frames or test mode; history composition no longer loses entries
+
+2.0.4 (code review)
+- Options: navigation buttons were anchored so the client ignored their height (overlapping tabs)
+- Frames automatically reserve vertical room for everything stacked below/above (pets, cooldowns,
+  totems, aura row, cast bar) – no more overlap between enemies
+- Previews (test frames, BG list, boss frames, HUD demo) end when a real arena or battleground starts
+- Pet casts (Spell Lock, Gnaw, Intimidation) count for the owner's cooldown row; CC on pets gives no DR
+- Trinket-ready glow/announce no longer fires for a frame that was reset in between
+- BG list hide is combat-safe; export strings with "{" import correctly; DR text uses 1/2 1/4 0;
+  font fallback checks the applied font; options window switches page when opened by page name
+
+2.0.3
+- Battleground list: own side is taken from the scoreboard (cross-faction battlegrounds), friendly players
+  no longer appear; /warena bgdebug prints raw scoreboard data
+
 2.0.2
 - Frames were hard to see in arenas: range fade is off by default (and migrated off), stealth/unseen opacity 0.65,
   better range-check spells per class

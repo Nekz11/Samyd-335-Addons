@@ -127,7 +127,7 @@ local function checksum(s)
 end
 
 local function escape(s)
-	return (s:gsub("\\", "\\\\"):gsub(";", "\\;"):gsub("=", "\\="):gsub("}", "\\}"):gsub(",", "\\,"))
+	return (s:gsub("\\", "\\\\"):gsub(";", "\\;"):gsub("=", "\\="):gsub("{", "\\{"):gsub("}", "\\}"):gsub(",", "\\,"))
 end
 
 local Serialize

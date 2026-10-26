@@ -160,6 +160,8 @@ local function CreateIcon(parent)
     tf:SetFrameLevel(f.cd:GetFrameLevel() + 1)
     f.count = tf:CreateFontString(nil, "OVERLAY")
     f.count:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 1, 0)
+    f.timer = tf:CreateFontString(nil, "OVERLAY")
+    f.timer:SetPoint("CENTER", f, "CENTER", 0, 0)
 
     f:SetScript("OnEnter", AuraOnEnter)
     f:SetScript("OnLeave", AuraOnLeave)
@@ -195,6 +197,7 @@ local function PlaceIcon(b, kind, i, f)
     f:SetWidth(size)
     f:SetHeight(size)
     ns.StyleFont(f.count, max(8, math.floor(size * 0.55)), "OUTLINE")
+    ns.StyleFont(f.timer, max(7, math.floor(size * 0.5)), "OUTLINE")
     f:EnableMouse(db.auraTooltips and kind ~= "dispels" and true or false)
 end
 
@@ -219,15 +222,42 @@ local function HideFrom(list, first)
     for i = first, #list do list[i]:Hide() end
 end
 
+-- remaining time on the icon (retail style: seconds, minutes above 60 s)
+local function UpdateTimerText(f, now)
+    local db = ns.db
+    local expires = f.expires
+    if not (db.auraTimers and expires) then
+        f.timer:SetText("")
+        return
+    end
+    local left = expires - now
+    local threshold = db.auraTimerThreshold or 0
+    if left <= 0 or (threshold > 0 and left > threshold) then
+        f.timer:SetText("")
+        return
+    end
+    if left >= 60 then
+        f.timer:SetText(math.floor(left / 60 + 0.5) .. "m")
+        f.timer:SetTextColor(1, 1, 1)
+    else
+        f.timer:SetText(math.ceil(left))
+        if left <= 5 then f.timer:SetTextColor(1, 0.3, 0.3) else f.timer:SetTextColor(1, 1, 1) end
+    end
+end
+ns.UpdateAuraTimerText = UpdateTimerText
+
 local function SetIcon(f, texture, count, duration, expires, r, g, bl, big)
     f.icon:SetTexture(texture)
     f.count:SetText((count and count > 1) and count or "")
     if duration and duration > 0 and expires then
         f.cd:SetCooldown(expires - duration, duration)
         f.cd:Show()
+        f.expires = expires
     else
         f.cd:Hide()
+        f.expires = nil
     end
+    UpdateTimerText(f, GetTime())
     f.border:SetVertexColor(r or 0, g or 0, bl or 0, 1)
     -- priority debuffs get the larger size, everything else the configured one
     local size = big or f.baseSize
@@ -296,6 +326,8 @@ function ns:UpdateAuras(b)
     local maxDebuffs = self:Cfg(b, "maxDebuffs")
     local blacklist, whitelist = db.debuffBlacklist, db.debuffWhitelist
     local usePrio = db.priorityDebuffs and b.kind ~= "pet"
+    local mode = db.debuffFilter or "IMPORTANT"
+    local importantNames = (mode == "IMPORTANT") and self:ImportantDebuffNames() or nil
 
     for k in pairs(seenTypes) do seenTypes[k] = nil end
     for i = #prioList, 1, -1 do prioList[i] = nil end
@@ -319,7 +351,7 @@ function ns:UpdateAuras(b)
                 prioList[#prioList + 1] = i
             elseif can then
                 dispellable[#dispellable + 1] = i
-            elseif not db.onlyDispellable then
+            elseif mode == "ALL" or (importantNames and importantNames[name]) then
                 others[#others + 1] = i
             end
         end
@@ -359,18 +391,24 @@ function ns:UpdateAuras(b)
 
     -- buffs
     local maxBuffs = self:Cfg(b, "maxBuffs")
-    local filter = db.onlyMyBuffs and "HELPFUL|PLAYER" or "HELPFUL"
+    local bmode = db.buffFilter or "IMPORTANT"
+    -- IMPORTANT: important buffs from anyone + my own short buffs; SHORT: every short buff (optionally only mine)
+    local filter = (bmode == "SHORT" and db.onlyMyBuffs) and "HELPFUL|PLAYER" or "HELPFUL"
+    local importantBuffs = (bmode == "IMPORTANT") and self:ImportantBuffNames() or nil
     shown = 0
     if maxBuffs > 0 then
         for i = 1, 40 do
-            local name, _, texture, count, _, duration, expires, _, _, _, spellId = UnitAura(unit, i, filter)
+            local name, _, texture, count, _, duration, expires, caster, _, _, spellId = UnitAura(unit, i, filter)
             if not name then break end
             local always = spellId and (BUFF_ALWAYS[spellId] or db.buffWhitelist[spellId])
+            local short = duration and duration > 0 and duration <= db.buffMaxDuration
             local ok
-            if db.buffWhitelistOnly then
+            if bmode == "WHITELIST" then
                 ok = always
+            elseif bmode == "IMPORTANT" then
+                ok = always or importantBuffs[name] or (short and (caster == "player" or caster == "pet" or caster == "vehicle"))
             else
-                ok = always or (duration and duration > 0 and duration <= db.buffMaxDuration)
+                ok = always or short
             end
             if ok then
                 shown = shown + 1
@@ -422,7 +460,7 @@ function ns:UpdateTestAuras(b)
         SetIcon(f, info[2], 1, 18, now + 12, r, g, bl)
         seenTypes[d.debuffType] = true
     end
-    if b.index == 1 and b.kind == "party" and not db.onlyDispellable and maxDebuffs > shown then
+    if b.index == 1 and b.kind == "party" and db.debuffFilter == "ALL" and maxDebuffs > shown then
         shown = shown + 1
         local f = GetIcon(b, "debuffs", shown)
         f.unit, f.auraIndex, f.testName = nil, nil, "Sunder Armor"
@@ -445,6 +483,31 @@ function ns:UpdateTestAuras(b)
     end
     HideFrom(b.buffs, shown + 1)
 end
+
+------------------------------------------------------------------------
+-- Timer text ticker
+------------------------------------------------------------------------
+local ticker = CreateFrame("Frame")
+local acc = 0
+ticker:SetScript("OnUpdate", function(_, elapsed)
+    acc = acc + elapsed
+    if acc < 0.1 then return end
+    acc = 0
+    if not ns.db or not ns.db.auraTimers or not ns.allButtons then return end
+    local now = GetTime()
+    local all = ns.allButtons
+    for i = 1, #all do
+        local b = all[i]
+        if b:IsShown() and b.debuffs then
+            for _, f in ipairs(b.debuffs) do
+                if f.expires and f:IsShown() then UpdateTimerText(f, now) end
+            end
+            for _, f in ipairs(b.buffs) do
+                if f.expires and f:IsShown() then UpdateTimerText(f, now) end
+            end
+        end
+    end
+end)
 
 ------------------------------------------------------------------------
 -- Events

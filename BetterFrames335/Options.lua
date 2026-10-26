@@ -51,10 +51,18 @@ local function AddHeader(c, text)
 end
 
 local function AddNote(c, text, width)
-    local fs = Text(c.p, text, c.x, c.y - 2, nil, width or (COL2 - 30))
-    c.y = c.y - fs:GetStringHeight() - 10
-    -- GetStringHeight can be 0 before the first render; keep a sane minimum
-    if fs:GetStringHeight() == 0 then c.y = c.y - 24 end
+    width = width or (COL2 - 30)
+    local fs = Text(c.p, text, c.x, c.y - 2, nil, width)
+    -- GetStringHeight is 0 before the first render: estimate from the text length instead
+    local h = fs:GetStringHeight()
+    if not h or h < 1 then
+        local lines = 0
+        for para in (text .. "\n"):gmatch("(.-)\n") do
+            lines = lines + math.max(1, math.ceil(strlen(para) * 5.6 / width))
+        end
+        h = lines * 12
+    end
+    c.y = c.y - h - 10
     return fs
 end
 

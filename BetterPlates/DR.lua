@@ -16,6 +16,7 @@ local PLAYER_FLAG = COMBATLOG_OBJECT_TYPE_PLAYER or 0x400
 local HOSTILE_FLAG = COMBATLOG_OBJECT_REACTION_HOSTILE or 0x40
 
 D.RESET = 18
+D.MAX_ACTIVE = 15   -- längster CC in WotLK (ohne Verbannen); danach gilt die Aura als abgelaufen
 D.store = {}        -- [GUID] = { [cat] = { level = n, expires = t, applied = t, active = bool, icon = tex } }
 D.catOrder = { "stun", "cheapshot", "fear", "horror", "incapacitate", "disorient", "silence", "root", "entrapment", "cyclone", "banish", "sleep", "charge", "disarm", "mc" }
 
@@ -47,6 +48,11 @@ local function Applied(guid, cat, spellId, now)
 		e = NewEntry()
 		e.level = 0
 		t[cat] = e
+	end
+	-- aktive Aura, deren Ende wir verpasst haben (kein REMOVED-Ereignis): als abgelaufen behandeln
+	if e.active and e.applied and now - e.applied > D.MAX_ACTIVE then
+		e.active = false
+		e.expires = e.applied + D.MAX_ACTIVE + D.RESET
 	end
 	-- abgelaufen und Reset vorbei -> neu anfangen
 	if e.expires and now > e.expires and not e.active then
@@ -90,6 +96,10 @@ function D:Cleanup()
 	local now = GetTime()
 	for guid, t in pairs(self.store) do
 		for cat, e in pairs(t) do
+			if e.active and e.applied and now - e.applied > D.MAX_ACTIVE then
+				e.active = false
+				e.expires = e.applied + D.MAX_ACTIVE + D.RESET
+			end
 			if not e.active and e.expires and now > e.expires then
 				t[cat] = nil
 				Free(e)
@@ -98,6 +108,7 @@ function D:Cleanup()
 		if not next(t) then self.store[guid] = nil end
 	end
 end
+ns:On("PLAYER_ENTERING_WORLD", function() D:Reset() end)
 
 function D:Reset()
 	for guid, t in pairs(self.store) do
@@ -162,6 +173,10 @@ function D:UpdatePlate(d)
 		for _, cat in ipairs(self.catOrder) do
 			order = order + 1
 			local e = t[cat]
+			if e and e.active and e.applied and now - e.applied > D.MAX_ACTIVE then
+				e.active = false
+				e.expires = e.applied + D.MAX_ACTIVE + D.RESET
+			end
 			if e and (cats == nil or cats[cat] ~= false) then
 				if e.active or (e.expires and now <= e.expires) then
 					e.cat = cat
@@ -186,7 +201,7 @@ function D:UpdatePlate(d)
 				SetFont(b.time, font, floor(size * 0.45))
 			end
 			b:ClearAllPoints()
-			b:SetPoint("BOTTOMLEFT", d.drFrame, "BOTTOM", x, 0)
+			b:SetPoint("BOTTOMLEFT", d.drFrame, "BOTTOM", x, 10)
 			x = x + size + 2
 			if b.icon ~= e.icon then
 				b.icon = e.icon

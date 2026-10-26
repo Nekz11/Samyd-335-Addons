@@ -13,7 +13,7 @@ ns:AddDefaults({
 	drColor1 = { r = 1, g = 1, b = 0, a = 1 }, drColor2 = { r = 1, g = 0.5, b = 0, a = 1 }, drColor3 = { r = 1, g = 0, b = 0, a = 1 },
 })
 
-local DR_TEXT = { "½", "¼", "0" }
+local DR_TEXT = { "1/2", "1/4", "0" }
 
 local function Key(cat) return "dr" .. cat:sub(1, 1):upper() .. cat:sub(2) end
 DR.Key = Key

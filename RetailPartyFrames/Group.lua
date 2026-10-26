@@ -44,8 +44,10 @@ ns.GroupTypeLabels = {
 function ns:UpdateGroupType(force)
     local gtype, size, arena, bg, raid = Detect()
     local changed = force or gtype ~= self.groupType or arena ~= self.inArena or bg ~= self.inBattleground or raid ~= self.inRaidGroup
-    local sizeChanged = size ~= self.groupSize
-    self.groupType, self.groupSize = gtype, size
+    -- in a raid the party frames show my subgroup, so a change of its size counts as well
+    local partySize = GetNumPartyMembers()
+    local sizeChanged = size ~= self.groupSize or partySize ~= self.partySize
+    self.groupType, self.groupSize, self.partySize = gtype, size, partySize
     self.inArena, self.inBattleground, self.inRaidGroup = arena, bg, raid
     if changed then
         self:Fire("GROUP_TYPE_CHANGED", gtype, size)
@@ -78,8 +80,21 @@ end
 local function changed()
     if ns.db then ns:UpdateGroupType() end
 end
-ns:On("PARTY_MEMBERS_CHANGED", changed)
-ns:On("RAID_ROSTER_UPDATE", changed)
+
+-- A roster change can swap the player behind a unit token without changing group type or size
+-- (two people trade places, someone is moved between subgroups). Redraw all frames once, shortly after.
+local redrawPending = false
+local function rosterChanged()
+    changed()
+    if redrawPending or not ns.db then return end
+    redrawPending = true
+    ns:After(0.2, function()
+        redrawPending = false
+        if ns.db and ns.UpdateAllButtons then ns:UpdateAllButtons() end
+    end)
+end
+ns:On("PARTY_MEMBERS_CHANGED", rosterChanged)
+ns:On("RAID_ROSTER_UPDATE", rosterChanged)
 ns:On("ZONE_CHANGED_NEW_AREA", changed)
 ns:On("PLAYER_ENTERING_WORLD", function()
     changed()

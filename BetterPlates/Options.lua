@@ -8,6 +8,8 @@ local L = ns.L or setmetatable({}, { __index = function(t, k) return k end })
 local W = ns.Widgets
 local P = ns.Profiles
 local format, floor, ipairs, pairs = string.format, math.floor, ipairs, pairs
+-- Alte Dateiliste (nur /reload nach dem Update): ohne Widgets/Profile kein Fenster, Plaketten laufen trotzdem
+if not W or not P then return end
 
 local WIN_W, WIN_H = 780, 590
 local SIDEBAR_W = 160
@@ -107,7 +109,7 @@ end
 -- Popups
 ----------------------------------------------------------------
 StaticPopupDialogs["BETTERPLATES_RESET"] = {
-	text = L["Reset the current profile to defaults?"],
+	text = L["Reset the current profile to defaults? Zone rules are kept."],
 	button1 = YES,
 	button2 = NO,
 	OnAccept = function()
@@ -126,6 +128,11 @@ StaticPopupDialogs["BETTERPLATES_DELETE_PROFILE"] = {
 	button1 = YES,
 	button2 = NO,
 	OnAccept = function(self, data)
+		if not data then return end
+		if P.name == data then
+			P:Activate(P.DEFAULT_NAME)
+			P:ApplyZone()
+		end
 		if P:Delete(data) then
 			ns:Print(format(L["Profile %s deleted."], tostring(data)))
 			if ns.optionsWindow and ns.optionsWindow.current then RefreshPage(ns.optionsWindow.current) end
@@ -233,7 +240,7 @@ local function PageGeneral(win)
 		P:ApplyPreset(P:PresetByName("PvE Raid"))
 		RefreshPage(pg)
 		ns:Print(L["Preset applied: PvE Raid. Raid and dungeon zone rules were written too (Zones page)."])
-	end, "Complete raid/dungeon setup: threat colors (DPS/Healer), important adds highlighted, bosses bigger, my debuffs, HoTs and dispels on friends, stacking on, no PvP auras/DR, dungeon kicks emphasized. Also writes raid/dungeon zone rules.")
+	end, "Complete raid/dungeon setup: threat colors (DPS/Healer), important adds highlighted, bosses bigger, my debuffs, HoTs and dispels on friends, client nameplate spreading, no PvP auras/DR, dungeon kicks emphasized. Also writes raid/dungeon zone rules.")
 	Note(pg, 1, "Tip: create a copy of your profile first (Profiles page) if you want to keep your current settings.", 40)
 	Header(pg, 1, "Size & Font")
 	Slider(pg, 1, "Width", "width", 60, 220, 2)
@@ -246,8 +253,12 @@ local function PageGeneral(win)
 	Check(pg, 1, "Font shadow", "fontShadow", "Only when outline is off.")
 
 	Header(pg, 2, "Layout")
-	Check(pg, 2, "Stack nameplates instead of overlapping", "stacking",
-		"Overlapping nameplates move up; your target stays in place. The 3.3.5a client cannot do this itself. Note: clicking still works at the original spot above the head.")
+	Check(pg, 2, "Client spreads nameplates (no overlap) - recommended", nil,
+		"Blizzard's own setting \"Allow Overlapping Unit Nameplates\" turned off: the client itself keeps nameplates apart, including the click area. Use this instead of the addon stacking below whenever possible.",
+		function() local ok, v = pcall(GetCVar, "nameplateAllowOverlap") return ok and v == "0" end,
+		function(v) pcall(SetCVar, "nameplateAllowOverlap", v and "0" or "1") end)
+	Check(pg, 2, "Addon stacking (visual only)", "stacking",
+		"Overlapping nameplates move up; your target stays in place. Only the display moves - clicking still works at the original spot above the head. Prefer the client option above.")
 	Check(pg, 2, "Stack in arena and battlegrounds too", "stackingPvP",
 		"Off by default: in PvP you click nameplates, and a shifted display no longer matches the click area.")
 	Check(pg, 2, "Stack in dungeons and raids", "stackingRaid")
@@ -321,6 +332,8 @@ local function PageColors(win)
 	Check(pg, 1, "Class color on enemy players", "classColorEnemy")
 	Check(pg, 1, "Class color on friendly players", "classColorFriendly",
 		"Classes are known for your group and for players seen in the combat log, chat, guild, friends list, or targeted/moused over.")
+	Check(pg, 1, "Color bar by crowd control", "colorByAura",
+		"While a unit is stunned, feared, silenced, rooted or immune, its bar takes the color of that category (red, purple, blue, green, gold).")
 	ColorPick(pg, 1, "Background", "colors.bg")
 	ColorPick(pg, 1, "Border", "colors.border")
 	ColorPick(pg, 1, "Execute", "colors.execute")
@@ -680,29 +693,20 @@ local function PageZones(win)
 		RefreshPage(pg)
 	end)
 	PageButton(pg, 1, "Suggested raid rules", function()
-		local z = "raid"
-		P:SetOverride(z, "cvar:nameplateShowFriends", false)
-		P:SetOverride(z, "cvar:nameplateShowFriendlyPets", false)
-		P:SetOverride(z, "cvar:nameplateShowEnemyPets", false)
-		P:SetOverride(z, "cvar:nameplateShowFriendlyTotems", false)
-		P:SetOverride(z, "pvpAuras", false)
-		P:SetOverride(z, "dr", false)
-		P:SetOverride(z, "stacking", false)
-		P:SetOverride(z, "threatMode", 2)
-		P:SetOverride(z, "raidNpcHighlight", true)
+		P:SetOverrides("raid", {
+			["cvar:nameplateShowFriends"] = false, ["cvar:nameplateShowFriendlyPets"] = false,
+			["cvar:nameplateShowEnemyPets"] = false, ["cvar:nameplateShowFriendlyTotems"] = false,
+			pvpAuras = false, dr = false, stacking = false, threatMode = 2, raidNpcHighlight = true,
+		})
 		zoneIdx = 3
 		RefreshPage(pg)
 	end, "Raid: no friendly plates, no pets/totems, no PvP auras, no DR, threat mode DPS/Healer, raid NPC highlight on.")
 	PageButton(pg, 1, "Suggested arena rules", function()
-		local z = "arena"
-		P:SetOverride(z, "cvar:nameplateShowEnemies", true)
-		P:SetOverride(z, "cvar:nameplateShowFriends", true)
-		P:SetOverride(z, "friendlyNameOnly", true)
-		P:SetOverride(z, "dr", true)
-		P:SetOverride(z, "arenaNumbers", true)
-		P:SetOverride(z, "stacking", false)
-		P:SetOverride(z, "classIconEnemy", true)
-		P:SetOverride(z, "raidNpcHighlight", false)
+		P:SetOverrides("arena", {
+			["cvar:nameplateShowEnemies"] = true, ["cvar:nameplateShowFriends"] = true,
+			friendlyNameOnly = true, dr = true, arenaNumbers = true, stacking = false,
+			classIconEnemy = true, raidNpcHighlight = false,
+		})
 		zoneIdx = 5
 		RefreshPage(pg)
 	end, "Arena: friends as names only, DR on, arena numbers, class icons on enemies, stacking off.")
@@ -762,11 +766,8 @@ local function PageProfiles(win)
 	end, "Delete current", function()
 		if P.name == P.DEFAULT_NAME then ns:Print(L["The Default profile cannot be deleted."]) return end
 		local victim = P.name
-		P:Activate(P.DEFAULT_NAME)
-		P:ApplyZone()
-		local dlg = StaticPopup_Show("BETTERPLATES_DELETE_PROFILE", victim)
+		local dlg = StaticPopup_Show("BETTERPLATES_DELETE_PROFILE", victim, nil, victim)
 		if dlg then dlg.data = victim end
-		RefreshPage(pg)
 	end)
 	PageButton(pg, 1, "Reset current profile to defaults", function() StaticPopup_Show("BETTERPLATES_RESET") end)
 
@@ -816,12 +817,13 @@ local function PageBlizzard(win)
 	CVarCheck(pg, 1, "Enemy pets", "nameplateShowEnemyPets")
 	CVarCheck(pg, 1, "Enemy guardians", "nameplateShowEnemyGuardians")
 	CVarCheck(pg, 1, "Enemy totems", "nameplateShowEnemyTotems")
+	Header(pg, 1, "Layout")
+	CVarCheck(pg, 1, "Allow overlapping nameplates", "nameplateAllowOverlap",
+		"Off = the client spreads nameplates so they do not overlap (recommended; moves the click area too).")
 	Header(pg, 2, "Other")
-	CVarCheck(pg, 2, "Class colors from the client", "ShowClassColorInNameplate",
-		"Lets the client color enemy players by class when it knows them. BetterPlates adds its own class detection on top.")
+	Note(pg, 2, "Class colors from the client (ShowClassColorInNameplate) are kept on by BetterPlates: it reads enemy classes from them.", 40)
 	CVarCheck(pg, 2, "Cast bars on nameplates", "ShowVKeyCastbar",
 		"Client cast bar on your target's nameplate. Needed for exact cast data on the target.")
-	CVarCheck(pg, 2, "Spell icon on the client cast bar", "ShowVKeyCastbarSpellName")
 	Note(pg, 2, "These are the client's own nameplate settings (same as the V key and Interface > Names). Key bindings for toggling friendly/enemy/all nameplates are under Key Bindings > BetterPlates. Per-zone rules are on the Zones page.", 90)
 	return pg
 end
@@ -863,7 +865,7 @@ local function PageHelp(win)
 		L["Not possible on this client: absorb shields, resource/combo points, range fading, talent spec detection, click-through plates, native stacking, quest markers, cast target names, combat state of non-targets."])
 	local tips = Block(lim, -14, "Tips",
 		L["Orange labels mark settings overridden by a zone rule. Use the search box in the sidebar to find any setting. Right-click colors to reset them."])
-	pg.maxY = 560
+	pg.maxY = 680
 
 	-- Spenden-Box
 	local box = CreateFrame("Frame", nil, c)

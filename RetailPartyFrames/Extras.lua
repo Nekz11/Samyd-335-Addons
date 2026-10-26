@@ -32,6 +32,7 @@ ns:RegisterCallback("LAYOUT", function() ApplyOOCAlpha(InCombatLockdown()) end)
 local function Channel()
     local mode = ns.db.announce.channel
     if mode == "SELF" then return nil end
+    if ns.inBattleground and mode ~= "SAY" then return "BATTLEGROUND" end
     if mode == "AUTO" then
         if GetNumRaidMembers() > 0 then return "RAID" end
         if GetNumPartyMembers() > 0 then return "PARTY" end

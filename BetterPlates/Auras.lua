@@ -13,7 +13,7 @@ local durations = {}   -- [Spell-ID] = zuletzt gesehene Dauer
 A.store = store
 
 local GetTime, GetSpellInfo, UnitAura, UnitGUID = GetTime, GetSpellInfo, UnitAura, UnitGUID
-local pairs, wipe, sort, min, format, ceil = pairs, wipe, table.sort, math.min, string.format, math.ceil
+local pairs, wipe, sort, min, floor, format, ceil = pairs, wipe, table.sort, math.min, math.floor, string.format, math.ceil
 local band = bit.band
 local PLAYER_FLAG = COMBATLOG_OBJECT_TYPE_PLAYER or 0x400
 local HOSTILE_FLAG = COMBATLOG_OBJECT_REACTION_HOSTILE or 0x40
@@ -33,7 +33,9 @@ local function NewAura()
 	return {}
 end
 local function FreeAura(a)
-	a.lockout, a.mineBuff, a.dispel = nil, nil, nil
+	a.lockout, a.mineBuff, a.dispel, a.mine, a.cat = nil, nil, nil, nil, nil
+	a.count, a.stamp, a.spellId, a.name, a.icon = 0, nil, nil, nil, nil
+	a.duration, a.expires, a.added, a.prio = 0, 0, nil, 10
 	pool[#pool + 1] = a
 end
 
@@ -216,6 +218,8 @@ function A:ScanUnit(unit)
 	if not ns.pvpAuras then return end
 	local guid = UnitGUID(unit)
 	if not guid then return end
+	-- Nicht sichtbare Einheiten liefern keine Auren: bekannte Kampflog-Auren behalten
+	if UnitIsVisible and not UnitIsVisible(unit) then return end
 
 	local t = store[guid]
 	if not t then
@@ -420,8 +424,8 @@ local function Layout(d, n, sizes)
 		end
 		y = y + rowH[r] + gap
 	end
-	d.auraFrame:SetWidth(maxW)
-	d.auraFrame:SetHeight(y - gap)
+	d.auraFrame:SetWidth(math.max(maxW, 1))
+	d.auraFrame:SetHeight(math.max(y - gap, 1))
 end
 
 local sizes = {}
@@ -456,14 +460,14 @@ function A:UpdatePlate(d)
 
 		local base = db.auraSize
 		local font = ns.GetFont and ns.GetFont() or (ns.fonts[db.font] or ns.fonts[1])[2]
-		local layoutKey = 0
+		local layoutKey = ""
 		for i = 1, n do
 			local a = list[i]
 			local b = GetIcon(d, i)
 			local size = base
 			if ns.keyAuras[a.name] then size = floor(base * 1.4 + 0.5) end
 			sizes[i] = size
-			layoutKey = layoutKey * 64 + size
+			layoutKey = layoutKey .. size .. ","
 
 			if b.size ~= size or b.font ~= font then
 				b.size, b.font = size, font
@@ -518,8 +522,8 @@ function A:UpdatePlate(d)
 			end
 			b:Show()
 		end
-		layoutKey = layoutKey * 16 + (db.auraRows or 1) * 4 + (db.auraGrow or 1)
-		if d.auraLayoutKey ~= layoutKey or d.auraLayoutN ~= n then
+		layoutKey = layoutKey .. (db.auraRows or 1) .. "/" .. (db.auraGrow or 1) .. "/" .. (db.auraSpacing or 2)
+		if n > 0 and (d.auraLayoutKey ~= layoutKey or d.auraLayoutN ~= n) then
 			d.auraLayoutKey, d.auraLayoutN = layoutKey, n
 			Layout(d, n, sizes)
 		end
@@ -610,7 +614,10 @@ local function StartCast(guid, spellId, spellName, channel, now)
 	end
 	if not duration or duration <= 0 then return end
 	if ns.castHide[name] then return end
-	local c = casts[guid] or NewCast()
+	-- immer ein anderes Objekt: die Plakette erkennt den neuen Zauber an der Identität
+	-- (erst neues holen, dann altes freigeben, sonst käme dasselbe aus dem Pool zurück)
+	local c = NewCast()
+	EndCast(guid)
 	casts[guid] = c
 	c.name = name
 	c.icon = icon

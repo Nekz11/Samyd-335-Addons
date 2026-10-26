@@ -193,6 +193,16 @@ function ns:RebuildUnitMap()
                 unitButtons[b.unit] = list
             end
             list[#list + 1] = b
+            -- while in a vehicle the bar follows the vehicle unit's events as well
+            local disp = b.dispUnit
+            if disp and disp ~= b.unit then
+                local dl = unitButtons[disp]
+                if not dl then
+                    dl = {}
+                    unitButtons[disp] = dl
+                end
+                dl[#dl + 1] = b
+            end
         end
     end
 end
@@ -276,6 +286,11 @@ local function OnAttributeChanged(self, attr, value)
     if attr == "unit" then
         if not self.testData then self.unit = value end
         ns:RebuildUnitMap()
+        -- a shown button that got a new occupant (re-sort, group move) must redraw everything,
+        -- otherwise the previous player's health/auras/cooldowns stay until an event fires
+        if value and self.rpfSetup and not self.testData and self:IsShown() then
+            ns:UpdateButton(self)
+        end
     end
 end
 
@@ -299,9 +314,7 @@ function ns:SetupUnitButton(b, kind)
     b:SetScript("OnEnter", OnEnter)
     b:SetScript("OnLeave", OnLeave)
 
-    -- Clique / click-casting support
-    ClickCastFrames = ClickCastFrames or {}
-    ClickCastFrames[b] = true
+    -- Clique registration is handled by ClickCast.lua (ApplyClickBindings), depending on the option
 
     b.bg = b:CreateTexture(nil, "BACKGROUND")
     b.bg:SetAllPoints(b)
@@ -597,8 +610,9 @@ function ns:UpdateHealth(b)
         dead, ghost, offline, class = d.dead, false, d.offline, d.class
     else
         local unit = b.unit
-        cur, mx = UnitHealth(unit), UnitHealthMax(unit)
-        dead, ghost = UnitIsDead(unit), UnitIsGhost(unit)
+        local disp = b.dispUnit or unit
+        cur, mx = UnitHealth(disp), UnitHealthMax(disp)
+        dead, ghost = UnitIsDead(disp), UnitIsGhost(disp)
         offline = not UnitIsConnected(unit)
         local _
         if b.kind == "pet" then
@@ -696,7 +710,8 @@ function ns:UpdatePower(b)
         cur = floor(100 * (b.testData.power or 1))
         ptype = b.testData.powerType or 0
     else
-        cur, mx, ptype = UnitPower(b.unit), UnitPowerMax(b.unit), UnitPowerType(b.unit)
+        local disp = b.dispUnit or b.unit
+        cur, mx, ptype = UnitPower(disp), UnitPowerMax(disp), UnitPowerType(disp)
     end
     if not mx or mx <= 0 then mx = 1 end
     b.power:SetMinMaxValues(0, mx)
@@ -866,7 +881,7 @@ function ns:UpdateHealPrediction(b)
         pred:Hide()
         return
     end
-    local unit = b.unit
+    local unit = b.dispUnit or b.unit
     local guid = UnitGUID(unit)
     if not guid or UnitIsDeadOrGhost(unit) then pred:Hide() return end
     local amount = HealComm:GetHealAmount(guid, HealComm.ALL_HEALS) or 0
@@ -926,9 +941,31 @@ function ns:UpdateArenaTargets(b)
     end
 end
 
+-- Unit whose health/power the bar shows: the vehicle while the member sits in one (vehicleSwap),
+-- otherwise the member itself. Name, class, role, auras and cooldowns always belong to the member.
+function ns:DisplayUnit(b)
+    local unit = b.unit
+    if not unit or b.testData or b.kind == "pet" then return unit end
+    if self.db.vehicleSwap and UnitHasVehicleUI and UnitHasVehicleUI(unit) then
+        local veh
+        if unit == "player" then
+            veh = "pet"
+        else
+            veh = string.gsub(unit, "^(%a+)(%d+)$", "%1pet%2")
+        end
+        if UnitExists(veh) then return veh end
+    end
+    return unit
+end
+
 function ns:UpdateButton(b)
     if not (b.unit or b.testData) then return end
     if b.unit and not b.testData and not UnitExists(b.unit) then return end
+    local disp = self:DisplayUnit(b)
+    if disp ~= b.dispUnit then
+        b.dispUnit = disp
+        self:RebuildUnitMap()
+    end
     self:UpdatePowerVisibility(b)
     self:UpdateRole(b)
     self:UpdateName(b)
@@ -1048,6 +1085,8 @@ function ns:CreateMover(container, label, pointKey)
         container:StopMovingOrSizing()
         local p, _, rp, x, y = container:GetPoint(1)
         ns.db[pointKey] = { p, rp, x, y }
+        -- the raid preview container is anchored separately from the mover: re-anchor it
+        if ns.testMode and ns.RefreshAll then ns:RefreshAll() end
     end)
     mover:SetScript("OnMouseUp", function(_, btn)
         if btn == "RightButton" then ns:ToggleLock(true) end
@@ -1077,10 +1116,15 @@ function ns:ToggleLock(force)
     else
         self.db.locked = not self.db.locked
     end
+    self:SyncMovers()
+    if self.RefreshOptions then self:RefreshOptions() end
+end
+
+-- movers follow the active profile's `locked` flag (also after profile switch / reset / import)
+function ns:SyncMovers()
     for _, m in ipairs(self.movers or {}) do
         if self.db.locked then m:Hide() else m:Show() end
     end
-    if self.RefreshOptions then self:RefreshOptions() end
 end
 
 function ns:ResetPosition()
@@ -1207,8 +1251,10 @@ ns:On("RAID_TARGET_UPDATE", all(ns.UpdateRaidIcon))
 ns:On("PARTY_LEADER_CHANGED", all(ns.UpdateLeader))
 ns:On("PARTY_MEMBER_ENABLE", all(ns.UpdateButton))
 ns:On("PARTY_MEMBER_DISABLE", all(ns.UpdateButton))
+-- UpdateButton re-evaluates the display unit (vehicle <-> member) and rebuilds the unit map
 ns:On("UNIT_ENTERED_VEHICLE", function(_, unit) ForUnit(unit, ns.UpdateButton) end)
 ns:On("UNIT_EXITED_VEHICLE", function(_, unit) ForUnit(unit, ns.UpdateButton) end)
+ns:On("UNIT_PET", function(_, unit) ForUnit(unit, ns.UpdateButton) end)
 
 ns:On("PLAYER_ROLES_ASSIGNED", function()
     ns:Fire("ROLES_CHANGED")

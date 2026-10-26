@@ -41,10 +41,11 @@ end)
 
 local function CaptureEnemies()
 	if not current then return end
+	for k in pairs(current.enemies) do current.enemies[k] = nil end
 	for i = 1, ns.Frames:Count() do
 		local f = ns.Frames:Get(i)
 		if f.class then
-			current.enemies[i] = { name = f.name, class = f.class, spec = f.spec, dead = f.dead }
+			current.enemies[#current.enemies + 1] = { id = i, name = f.name, class = f.class, spec = f.spec, dead = f.dead }
 		end
 	end
 	if current.bracket == "?" then current.bracket = Bracket() end
@@ -120,7 +121,7 @@ end
 -- spec memory: remember the spec of enemy names, pre-fill it next time
 ---------------------------------------------------------------------------
 ns:RegisterMessage("ENEMY_SPEC", function(_, f, spec)
-	if not ns.db.specMemory or not f.name or not spec or ns.state.testMode then return end
+	if not ns.db.specMemory or not f.name or not spec or ns.state.testMode or f.kind ~= "arena" then return end
 	local _, specs = Store()
 	specs[f.name] = { class = f.class, spec = spec, seen = time and time() or 0 }
 end)

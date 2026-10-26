@@ -43,7 +43,6 @@ ns.defaults = {
 	levelColor = true,       -- Level in Blizzard-Schwierigkeitsfarbe
 	hideLevelMaxPlayers = true,
 	eliteMark = true,        -- "+" / "R" hinter dem Level
-	bossSkull = true,
 	nameInBar = false,
 	nameMaxLen = 0,          -- 0 = unbegrenzt
 	abbrevNames = false,     -- "Lord Marrowgar" -> "L. Marrowgar"
@@ -183,7 +182,6 @@ ns.defaults = {
 	castHideList = "",           -- Zauber, für die keine Leiste gezeigt wird
 	castSound = false,           -- Ton bei hervorgehobenem Zauber
 	castSoundId = 1,
-	immuneText = false,
 
 	-- Auren
 	auras = true,
@@ -222,7 +220,7 @@ ns.defaults = {
 ns.textures = {
 	{ "Blizzard", "Interface\\TargetingFrame\\UI-StatusBar" },
 	{ "Flat", "Interface\\Buttons\\WHITE8X8" },
-	{ "Raid", "Interface\\RaidFrame\\Raid-Bar-Hp-Fill" },
+	{ "Skills", "Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar" },
 	{ "Smooth", ns.MEDIA .. "smooth" },
 }
 
@@ -342,7 +340,7 @@ end
 
 local function CacheGuild()
 	if not IsInGuild or not IsInGuild() then return end
-	for i = 1, (GetNumGuildMembers and GetNumGuildMembers(true) or 0) do
+	for i = 1, (GetNumGuildMembers and GetNumGuildMembers() or 0) do
 		local name, _, _, _, locClass, _, _, _, _, _, classFile = GetGuildRosterInfo(i)
 		if name then
 			local class = (classFile and RAID_CLASS_COLORS[classFile]) and classFile or ClassFromLocalized(locClass)
@@ -427,7 +425,7 @@ local function CopyDefaultsInto(src, dst)
 		if type(v) == "table" then
 			if type(dst[k]) ~= "table" then dst[k] = {} end
 			CopyDefaultsInto(v, dst[k])
-		elseif dst[k] == nil then
+		elseif dst[k] == nil or type(dst[k]) ~= type(v) then
 			dst[k] = v
 		end
 	end
@@ -467,8 +465,10 @@ ns:On("PLAYER_LOGIN", function()
 	pcall(SetCVar, "bloatnameplates", "0")
 	pcall(SetCVar, "bloatthreat", "0")
 	ns:RebuildAuraLists()
-	ns.Plates:ResolveInterrupt()
-	ns.Plates:Init()
+	if ns.Plates then
+		ns.Plates:ResolveInterrupt()
+		ns.Plates:Init()
+	end
 	if ns.CreateOptions then ns:CreateOptions() end
 	if ns.Minimap then ns.Minimap:Create() end
 	if ns.needsRestart then

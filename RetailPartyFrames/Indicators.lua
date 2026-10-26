@@ -201,10 +201,19 @@ ticker:SetScript("OnUpdate", function(_, elapsed)
     for i = 1, #all do
         local b = all[i]
         if b:IsShown() and b.indicators then
+            local reseed = false
             for _, slot in ipairs(SLOTS) do
                 local f = b.indicators[slot]
-                if f:IsShown() and f.expires then ns:UpdateIndicatorText(f, now) end
+                if f:IsShown() and f.expires then
+                    if b.testData and f.expires <= now then
+                        reseed = true
+                    else
+                        ns:UpdateIndicatorText(f, now)
+                    end
+                end
             end
+            -- preview timers ran out: start them again so the preview keeps showing indicators
+            if reseed then ns:UpdateIndicators(b) end
         end
     end
 end)

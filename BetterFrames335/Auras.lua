@@ -292,6 +292,11 @@ end
 ----------------------------------------------------------------------
 local PLAYER_DEFAULT_SIZE = 30
 
+-- Blizzard's buff buttons may be protected on some builds: never touch them in combat
+local function CanTouch(b)
+    return not (b.IsProtected and b:IsProtected() and InCombatLockdown())
+end
+
 local function PlayerAllowed(name, spellId, duration, expires, isDebuff)
     if BBF:InList("important", name, spellId) then return true end
     if isDebuff then
@@ -321,6 +326,7 @@ local function PlayerCooldown(b, duration, expires)
         if cd.SetReverse then pcall(cd.SetReverse, cd, true) end
         b.bbfCD = cd
     end
+    if not CanTouch(b) then return end
     if duration and duration > 0 and expires and expires > 0 then
         if b.bbfCDExp ~= expires then
             CooldownFrame_SetTimer(cd, expires - duration, duration, 1)
@@ -334,20 +340,41 @@ local function PlayerCooldown(b, duration, expires)
 end
 
 local function StyleButton(b)
-    local size = db.playerAuraLayout and db.playerAuraSize or PLAYER_DEFAULT_SIZE
-    if b.bbfPSize ~= size then
-        b:SetWidth(size)
-        b:SetHeight(size)
-        b.bbfPSize = size
-    end
+    if not CanTouch(b) then return end
     local n = b:GetName()
+    -- size
+    if db.playerAuraLayout then
+        if b.bbfPSize ~= db.playerAuraSize then
+            b:SetWidth(db.playerAuraSize)
+            b:SetHeight(db.playerAuraSize)
+            b.bbfPSize = db.playerAuraSize
+        end
+    elseif b.bbfPSize then
+        b:SetWidth(PLAYER_DEFAULT_SIZE)
+        b:SetHeight(PLAYER_DEFAULT_SIZE)
+        b.bbfPSize = nil
+    end
+    -- duration text
     local dur = _G[n .. "Duration"]
-    if dur then dur:SetAlpha(db.playerAuraHideDuration and 0 or 1) end
+    if dur then BBF:SetAlphaIf(dur, db.playerAuraHideDuration, "dur") end
+    -- stack count font (store the original once, restore when the option is back at default)
     local count = _G[n .. "Count"]
-    if count and b.bbfCountSize ~= db.playerAuraStackSize then
-        local path, _, flags = count:GetFont()
-        count:SetFont(path or STANDARD_TEXT_FONT, db.playerAuraStackSize, flags or "OUTLINE")
-        b.bbfCountSize = db.playerAuraStackSize
+    if count then
+        local custom = db.playerAuraLayout or db.playerBuffFilter or db.playerDebuffFilter
+        if custom and db.playerAuraStackSize ~= 14 then
+            if not b.bbfCountOrig then
+                local path, size, flags = count:GetFont()
+                b.bbfCountOrig = { path, size, flags }
+            end
+            if b.bbfCountSize ~= db.playerAuraStackSize then
+                count:SetFont(b.bbfCountOrig[1] or STANDARD_TEXT_FONT, db.playerAuraStackSize, b.bbfCountOrig[3] or "OUTLINE")
+                b.bbfCountSize = db.playerAuraStackSize
+            end
+        elseif b.bbfCountOrig then
+            local o = b.bbfCountOrig
+            if o[1] then count:SetFont(o[1], o[2], o[3]) end
+            b.bbfCountOrig, b.bbfCountSize = nil, nil
+        end
     end
 end
 
@@ -363,7 +390,7 @@ local function PlayerAuraUpdate(buttonName, index, filter)
     local isDebuff = buttonName == "DebuffButton"
     StyleButton(b)
     PlayerCooldown(b, duration, expires)
-    if not PlayerAllowed(name, spellId, duration, expires, isDebuff) then
+    if not PlayerAllowed(name, spellId, duration, expires, isDebuff) and CanTouch(b) then
         b:Hide()
         b.bbfHidden = true
     end
@@ -393,7 +420,7 @@ local function RelayoutPlayerBuffs()
     local n, prev, above = 0, nil, nil
     for i = 1, BUFF_ACTUAL_DISPLAY do
         local b = _G["BuffButton" .. i]
-        if b and not b.consolidated and not b.bbfHidden then
+        if b and not b.consolidated and not b.bbfHidden and CanTouch(b) then
             n = n + 1
             local idx = n + slack
             b:ClearAllPoints()
@@ -441,7 +468,7 @@ local function RelayoutPlayerDebuffs()
     local n, prev, above = 0, nil, nil
     for i = 1, DEBUFF_ACTUAL_DISPLAY do
         local b = _G["DebuffButton" .. i]
-        if b and not b.bbfHidden then
+        if b and not b.bbfHidden and CanTouch(b) then
             n = n + 1
             b:ClearAllPoints()
             if n == 1 then

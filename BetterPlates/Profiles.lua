@@ -29,6 +29,7 @@ P.ZONE_KEYS = {
 	{ key = "cvar:nameplateShowEnemyTotems", label = "Show enemy totems", cvar = true },
 	{ key = "cvar:nameplateShowFriendlyGuardians", label = "Show friendly guardians", cvar = true },
 	{ key = "cvar:nameplateShowEnemyGuardians", label = "Show enemy guardians", cvar = true },
+	{ key = "cvar:nameplateAllowOverlap", label = "Allow overlapping nameplates (client)", cvar = true },
 	-- Addon-Schalter
 	{ key = "friendlyNameOnly", label = "Friends: names only" },
 	{ key = "friendlyOnlyGroup", label = "Friends: only group members" },
@@ -69,7 +70,7 @@ local function CopyDefaults(src, dst)
 		if type(v) == "table" then
 			if type(dst[k]) ~= "table" then dst[k] = {} end
 			CopyDefaults(v, dst[k])
-		elseif dst[k] == nil then
+		elseif dst[k] == nil or type(dst[k]) ~= type(v) then
 			dst[k] = v
 		end
 	end
@@ -136,6 +137,7 @@ function P:Load()
 	end
 	self.root = root
 	self:Activate(name)
+	self.activeZone = nil   -- erstes PLAYER_ENTERING_WORLD wendet die Zone (inkl. CVars) an
 end
 
 -- Profil aktivieren: Defaults ergänzen, Zonen-Tabelle anlegen, effektive Tabelle bauen
@@ -193,9 +195,8 @@ function P:Reset()
 	local zones = self.profile.zones
 	wipe(self.profile)
 	CopyDefaults(ns.defaults, self.profile)
-	self.profile.zones = zones
-	for _, z in ipairs(P.ZONES) do wipe(zones[z]) end
-	self:Rebuild()
+	self.profile.zones = zones   -- Zonenregeln bleiben erhalten
+	self:ApplyZone()
 end
 
 -- Alle Profile, die diesen Charakter betreffen (Anzeige)
@@ -228,7 +229,9 @@ function P:Rebuild()
 	end
 	local over = self:Overrides()
 	for k, v in pairs(over) do
-		if k:sub(1, 5) ~= "cvar:" then db[k] = v end
+		if type(k) == "string" and k:sub(1, 5) ~= "cvar:" and ns.defaults[k] ~= nil and type(ns.defaults[k]) == type(v) then
+			db[k] = v
+		end
 	end
 	db.zones = nil
 	self.activeZone = self:CurrentZone()
@@ -238,14 +241,35 @@ end
 function P:ApplyZone()
 	self:Rebuild()
 	local over = self:Overrides()
-	for k, v in pairs(over) do
-		if k:sub(1, 5) == "cvar:" then
-			local cvar = k:sub(6)
-			pcall(SetCVar, cvar, v and "1" or "0")
+	local root = self.root
+	root.cvarBase = root.cvarBase or {}
+	-- CVars: überschriebene setzen (Vorwert merken), nicht überschriebene auf den Vorwert zurück
+	for _, def in ipairs(P.ZONE_KEYS) do
+		if def.cvar then
+			local cvar = def.key:sub(6)
+			local v = over[def.key]
+			if v ~= nil then
+				if root.cvarBase[cvar] == nil then
+					local ok, cur = pcall(GetCVar, cvar)
+					if ok and cur ~= nil then root.cvarBase[cvar] = tostring(cur) end
+				end
+				pcall(SetCVar, cvar, v and "1" or "0")
+			elseif root.cvarBase[cvar] ~= nil then
+				pcall(SetCVar, cvar, root.cvarBase[cvar])
+				root.cvarBase[cvar] = nil
+			end
 		end
 	end
 	if ns.RebuildAuraLists then ns:RebuildAuraLists() end
 	if ns.Refresh then ns:Refresh() end
+end
+
+-- Mehrere Regeln auf einmal setzen (ein ApplyZone)
+function P:SetOverrides(zone, rules)
+	local zt = self.profile.zones[zone]
+	if not zt then return end
+	for k, v in pairs(rules) do zt[k] = v end
+	if zone == self:CurrentZone() then self:ApplyZone() end
 end
 
 function P:IsOverridden(key)
@@ -318,7 +342,7 @@ P.PRESETS = {
 	},
 	{
 		name = "PvE Raid", full = true,
-		desc = "Complete raid/dungeon setup: threat colors (DPS/Healer), important adds highlighted, bosses bigger, my debuffs, HoTs and dispels on friends, stacking on, no PvP auras/DR, dungeon kicks emphasized. Also writes raid/dungeon zone rules.",
+		desc = "Complete raid/dungeon setup: threat colors (DPS/Healer), important adds highlighted, bosses bigger, my debuffs, HoTs and dispels on friends, client nameplate spreading, no PvP auras/DR, dungeon kicks emphasized. Also writes raid/dungeon zone rules.",
 		settings = {
 			width = 115, height = 10, fontSize = 10, targetScale = 1.15, texture = 4, borderStyle = 2, bgStyle = 1,
 			healthText = 4, healthDecimals = false, abbrevNames = true, nameMaxLen = 0, levelColor = true, eliteMark = true,
@@ -334,15 +358,17 @@ P.PRESETS = {
 			lowHealthFlash = true, lowHealthPct = 35,
 			trinketIndicator = false, enemyTargetIndicator = false, targetedBy = false, flagCarrier = false,
 			totemIndicator = false, allTotemIcons = false, smallPets = true, hideCritters = true, trivialMode = 2,
-			stacking = true, stackingRaid = true, stackingPvP = false, stackSpacing = 2,
+			stacking = false, stackingRaid = true, stackingPvP = false, stackSpacing = 2,
 			execute = true, executePct = 20, executeColor = false,
 		},
 		zones = {
 			raid = { ["cvar:nameplateShowFriends"] = false, ["cvar:nameplateShowFriendlyPets"] = false, ["cvar:nameplateShowEnemyPets"] = false,
 				["cvar:nameplateShowFriendlyTotems"] = false, ["cvar:nameplateShowFriendlyGuardians"] = false, ["cvar:nameplateShowEnemies"] = true,
-				pvpAuras = false, dr = false, threatMode = 2, raidNpcHighlight = true, stacking = true },
+				["cvar:nameplateAllowOverlap"] = false,
+				pvpAuras = false, dr = false, threatMode = 2, raidNpcHighlight = true, stacking = false },
 			party = { ["cvar:nameplateShowFriends"] = false, ["cvar:nameplateShowFriendlyPets"] = false, ["cvar:nameplateShowEnemies"] = true,
-				pvpAuras = false, dr = false, threatMode = 2, raidNpcHighlight = true, stacking = true },
+				["cvar:nameplateAllowOverlap"] = false,
+				pvpAuras = false, dr = false, threatMode = 2, raidNpcHighlight = true, stacking = false },
 		},
 	},
 	{
@@ -537,14 +563,44 @@ function P:Import(str, intoName)
 	for k, v in pairs(data.s) do
 		local def = ns.defaults[k]
 		if def ~= nil and type(def) == type(v) then
-			target[k] = v
+			if type(def) == "table" then
+				-- Untertabellen elementweise mit Typprüfung (Farben: 3 Zahlen; Kategorien: Boolean)
+				local t = type(target[k]) == "table" and target[k] or {}
+				target[k] = t
+				for sk, sv in pairs(v) do
+					local sd = def[sk]
+					if sd ~= nil and type(sd) == type(sv) then
+						if type(sd) == "table" then
+							if type(sv[1]) == "number" and type(sv[2]) == "number" and type(sv[3]) == "number" then
+								t[sk] = { sv[1], sv[2], sv[3] }
+							end
+						else
+							t[sk] = sv
+						end
+					end
+				end
+			else
+				target[k] = v
+			end
 			n = n + 1
 		end
 	end
+	CopyDefaults(ns.defaults, target)
 	if type(data.z) == "table" then
 		target.zones = target.zones or {}
 		for _, z in ipairs(P.ZONES) do
-			if type(data.z[z]) == "table" then target.zones[z] = CopyTable(data.z[z]) end
+			local src = data.z[z]
+			if type(src) == "table" then
+				local zt = {}
+				for _, def in ipairs(P.ZONE_KEYS) do
+					local v = src[def.key]
+					if v ~= nil then
+						local okType = def.cvar and type(v) == "boolean" or (not def.cvar and type(v) == type(ns.defaults[def.key]))
+						if okType then zt[def.key] = v end
+					end
+				end
+				target.zones[z] = zt
+			end
 		end
 	end
 	if target == self.profile then self:ApplyZone() end

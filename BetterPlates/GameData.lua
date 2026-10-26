@@ -677,6 +677,7 @@ local INTERRUPT_LOCKOUT = {
     -- Silence-Auren (Dauer der Stille)
     [34490] = 3, -- Silencing Shot (Jäger)
     [47476] = 5, -- Strangulate (Todesritter)
+    [26679] = 3, -- Deadly Throw (Glyphe: 3 s Stille) -- unsicher
     [15487] = 5, -- Silence (Priester)
     [28730] = 2, -- Arcane Torrent (Mana)
     [25046] = 2, -- Arcane Torrent (Energie)

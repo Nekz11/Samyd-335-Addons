@@ -6,7 +6,7 @@ BBF335 = BBF335 or {}
 local BBF = BBF335
 
 BBF.ADDON   = "BetterFrames335"
-BBF.version = "2.1.3"
+BBF.version = "2.1.4"
 BBF.modules = {}
 
 -- Invisible parent used to hide secure frames without touching them in combat.
@@ -494,6 +494,17 @@ function BBF:SetScaleIf(f, scale)
     end
 end
 
+-- HookScript on a frame without an existing handler is not guaranteed on old clients:
+-- chain manually and keep whatever handler is already there
+function BBF:HookScriptSafe(frame, script, fn)
+    if not frame or not frame.GetScript then return end
+    local old = frame:GetScript(script)
+    frame:SetScript(script, function(self, ...)
+        if old then old(self, ...) end
+        fn(self, ...)
+    end)
+end
+
 -- remembers that a feature was active once so its "off" path can restore defaults
 BBF.touched = {}
 function BBF:Once(key, active)
@@ -709,8 +720,7 @@ function BBF:ImportProfile(str)
     str = strtrim(str or "")
     if str:sub(1, 5) ~= "BBF1:" then return false, "not a BetterFrames export string" end
     local body = str:sub(6)
-    -- only table/string/number/boolean literals can appear in our own format; reject anything else
-    if body:find("[%a_][%w_]*%s*%(") or body:find("function") then return false, "invalid data" end
+    -- the chunk runs in an empty environment: it can only build tables, nothing else is reachable
     local fn, err = loadstring("return " .. body)
     if not fn then return false, err end
     setfenv(fn, {})

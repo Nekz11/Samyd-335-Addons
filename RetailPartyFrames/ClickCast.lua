@@ -24,8 +24,19 @@ end
 -- Returns the bindings that are actually applied (defaults when disabled)
 function ns:EffectiveClickBindings()
     local cc = self.db.clickCast
-    if cc.enabled and not self:CliqueActive() then return cc.bindings end
+    if cc.enabled then return cc.bindings end
     return { { button = 1, mod = "", type = "target" }, { button = 2, mod = "", type = "menu" } }
+end
+
+-- Hands the button to Clique (true) or takes it back (false). Clique 3.3.5 watches the
+-- ClickCastFrames table: true registers the frame and writes its bindings, false unregisters.
+local function SetCliqueFrame(b, on)
+    ClickCastFrames = ClickCastFrames or {}
+    if on then
+        if ClickCastFrames[b] ~= true then ClickCastFrames[b] = true end
+    elseif ClickCastFrames[b] then
+        ClickCastFrames[b] = false
+    end
 end
 
 function ns:ApplyClickBindings(b)
@@ -35,11 +46,14 @@ function ns:ApplyClickBindings(b)
         for _, attr in ipairs(b.rpfClickAttrs) do b:SetAttribute(attr, nil) end
     end
     local applied = {}
-    if self:CliqueActive() and self.db.clickCast.enabled then
+    if self:CliqueActive() then
         -- Clique owns the clicks; keep nothing of ours
         b.rpfClickAttrs = applied
+        SetCliqueFrame(b, true)
         return
     end
+    -- our bindings: make sure Clique does not write into the same attributes
+    SetCliqueFrame(b, false)
     for _, bind in ipairs(self:EffectiveClickBindings()) do
         local btn = tonumber(bind.button) or 1
         local prefix = Prefix(bind.mod)

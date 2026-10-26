@@ -118,6 +118,7 @@ local function Check(col, label, key, tip, onChange)
     cb.tooltipText = label
     cb.tooltipRequirement = tip
     cb.key = key
+    cb.onChange = onChange
     cb:SetScript("OnClick", function(self)
         Set(key, self:GetChecked() and true or false)
         PlaySound(self:GetChecked() and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
@@ -138,6 +139,7 @@ local function Slider(col, label, key, minV, maxV, step, fmt, onChange)
     s:SetMinMaxValues(minV, maxV)
     s:SetValueStep(step)
     s.key = key
+    s.onChange = onChange
     _G[name .. "Low"]:SetText(minV)
     _G[name .. "High"]:SetText(maxV)
     local text = _G[name .. "Text"]
@@ -214,6 +216,7 @@ local function Dropdown(col, label, key, options, onChange)
             if onChange then onChange() else ns:Refresh() end
         end)
     dd.key = key
+    dd.onChange = onChange
     col.p.widgets[#col.p.widgets + 1] = dd
     col.y = col.y - 52
     return dd
@@ -259,6 +262,8 @@ local function TextSetting(col, label, key, width, onChange)
     end
     eb:SetScript("OnEnterPressed", save)
     eb:SetScript("OnEditFocusLost", save)
+    eb.key = key
+    eb.onChange = onChange
     eb.Refresh = function(self) self:SetText(tostring(Get(key) or "")) end
     col.p.widgets[#col.p.widgets + 1] = eb
     col.y = col.y - 30
@@ -294,6 +299,7 @@ local function ColorSwatch(col, label, key, onChange)
     fs:SetPoint("LEFT", b, "RIGHT", 6, 0)
     fs:SetText(label)
     b.key = key
+    b.onChange = onChange
     local function apply(r, g, bl)
         Set(key, { r, g, bl })
         b.swatch:SetVertexColor(r, g, bl)
@@ -429,7 +435,7 @@ local function IdListEditor(p, x, y, width, rows, title, getTable, mode, onChang
             ns:Print("Please enter a valid spell id.")
             return
         end
-        local t = getTable()
+        local t = getTable(true)
         if mode == "set" then
             t[id] = true
         else
@@ -443,7 +449,7 @@ local function IdListEditor(p, x, y, width, rows, title, getTable, mode, onChang
     local addBtn = Button(p, x + 96, y - 18, 60, "Add", add)
     addBtn:SetHeight(20)
     list = MakeList(p, x, y - 44, width, rows, nil, function(key)
-        local t = getTable()
+        local t = getTable(true)
         if mode == "set" then
             t[key] = nil
         else
@@ -453,7 +459,7 @@ local function IdListEditor(p, x, y, width, rows, title, getTable, mode, onChang
     end, "Remove")
     local w = { Refresh = function()
         local items = {}
-        local t = getTable()
+        local t = getTable(false)
         if mode == "set" then
             for id in pairs(t) do items[#items + 1] = { key = id, label = SpellLabel(id) } end
             table.sort(items, function(a, b) return a.key < b.key end)
@@ -569,11 +575,20 @@ local function NewPage(title, desc)
         for _, w in ipairs(p.widgets) do w:Refresh() end
     end
     p.default = function()
+        local custom = {}
         for _, w in ipairs(p.widgets) do
-            if w.key then Set(w.key, GetDefault(w.key)) end
+            if w.key then
+                Set(w.key, GetDefault(w.key))
+                -- widgets with their own apply step (minimap button, indicators...) run it once
+                if w.onChange and not custom[w.onChange] then
+                    custom[w.onChange] = true
+                    custom[#custom + 1] = w.onChange
+                end
+            end
         end
         p.refresh()
         ns:Refresh()
+        for _, fn in ipairs(custom) do fn() end
     end
 
     pages[#pages + 1] = p
@@ -800,7 +815,7 @@ local function BuildGeneral()
         { "BOTH", "Raid frames and party frames" },
     })
     Header(L, "Frames")
-    Check(L, "Swap to vehicle when a member enters one", "vehicleSwap", "Shows the vehicle's health instead of the passenger (needs /reload to take full effect).")
+    Check(L, "Swap to vehicle when a member enters one", "vehicleSwap", "While a member sits in a vehicle the frame shows the vehicle's health and power and clicks target the vehicle. Name, auras and cooldowns stay the member's.")
     Dropdown(L, "Unit tooltips", "tooltips", {
         { "ALWAYS", "Always" },
         { "OOC", "Only out of combat" },
@@ -987,6 +1002,7 @@ local function BuildIcons()
     Check(L, "'Res' on dead players being resurrected", "resIncoming")
     Check(L, "AFK / DND text", "afkText")
     Check(L, "Arena: enemies targeting this unit", "arenaTargets", "Shows how many arena opponents target the unit (red when 2 or more).")
+    Check(L, "Arena: PvP trinket cooldown first", "cdArenaTrinket")
     Check(L, "Battleground: flag carrier icon", "bgFlags")
 
     local R = Column(p, 300, TOP)
@@ -1004,10 +1020,14 @@ local function BuildIcons()
 end
 
 local function BuildAuras()
-    local p = NewPage("Buffs & Debuffs", "Debuffs you can dispel are shown first; the frame gets a colored border and glow in the debuff type color. Raid encounter debuffs can be shown larger.")
+    local p = NewPage("Buffs & Debuffs", "Important debuffs: dispellable, CC, silences, roots, healing reduction, raid debuffs, whitelist. Important buffs: externals, shields, HoTs, immunities from anyone plus your own short buffs.")
     local L = Column(p, 16, TOP)
     Header(L, "Debuffs")
-    Check(L, "Display only dispellable debuffs", "onlyDispellable")
+    Dropdown(L, "Show debuffs", "debuffFilter", {
+        { "IMPORTANT", "Important only" },
+        { "DISPELLABLE", "Only dispellable" },
+        { "ALL", "Everything" },
+    })
     Check(L, "Dispel border + glow on the frame", "dispelHighlight")
     Check(L, "Dispel type icons (top right)", "dispelIndicators")
     Check(L, "Highlight all debuff types", "highlightAllTypes", "Also highlight types you cannot remove yourself (good for calling dispels).")
@@ -1017,18 +1037,25 @@ local function BuildAuras()
     Dropdown(L, "Dispel sound", "dispelSoundFile", MediaOptions("sound"), function()
         PlaySoundFile(ns:Fetch("sound", ns.db.dispelSoundFile))
     end)
+    Header(L, "Timers")
+    Check(L, "Remaining time on buff / debuff icons", "auraTimers", "Seconds on the icon, minutes above 60 s; red during the last 5 seconds.")
+    Slider(L, "Show the time only below (sec, 0 = always)", "auraTimerThreshold", 0, 600, 5)
+    Check(L, "Aura tooltips", "auraTooltips", "Mouseover tooltips on aura icons (icons then catch clicks).")
 
     local R = Column(p, 300, TOP)
     Slider(R, "Max debuffs", "maxDebuffs", 0, 6, 1)
     Slider(R, "Debuff size", "debuffSize", 8, 32, 1)
     Slider(R, "Priority debuff size", "prioritySize", 10, 40, 1)
     Header(R, "Buffs")
-    Check(R, "Only my buffs", "onlyMyBuffs", "Like retail: only your HoTs/shields.")
-    Check(R, "Only whitelisted buffs", "buffWhitelistOnly", "Show nothing but the buff whitelist (Aura filters page).")
-    Check(R, "Aura tooltips", "auraTooltips", "Mouseover tooltips on aura icons (icons then catch clicks).")
+    Dropdown(R, "Show buffs", "buffFilter", {
+        { "IMPORTANT", "Important + my own" },
+        { "SHORT", "All short buffs" },
+        { "WHITELIST", "Whitelist only" },
+    })
+    Check(R, "Only my buffs (mode 'every buff')", "onlyMyBuffs", "In the 'every buff' mode: show only buffs cast by you. The important mode always shows your own short buffs plus important ones from anyone.")
     Slider(R, "Max buffs", "maxBuffs", 0, 6, 1)
     Slider(R, "Buff size", "buffSize", 8, 32, 1)
-    Slider(R, "Hide buffs longer than (sec)", "buffMaxDuration", 30, 3600, 30)
+    Slider(R, "Hide my buffs longer than (sec)", "buffMaxDuration", 30, 3600, 30)
 end
 
 local function BuildAuraFilters()
@@ -1082,10 +1109,15 @@ local function BuildIndicators()
     end)
     p.widgets[#p.widgets + 1] = dd
     IdListEditor(p, 300, TOP - 46, PAGE_W - 316, 7, "Spells in this corner (first match wins)",
-        function()
-            local slots = ns:EnsureIndicatorSlots()
-            slots[slot] = slots[slot] or {}
-            return slots[slot]
+        function(forWrite)
+            if forWrite then
+                -- editing copies the class defaults into the profile first
+                local slots = ns:EnsureIndicatorSlots()
+                slots[slot] = slots[slot] or {}
+                return slots[slot]
+            end
+            local s = ns.db.indicators.slots
+            return (s and s[slot]) or ns:IndicatorSlotIds(slot)
         end, "array", refresh)
 end
 
@@ -1130,21 +1162,25 @@ local function BuildCooldowns()
     Check(L, "Learn talent/glyph cooldowns", "cdLearn")
     Check(L, "Inspect group talents", "cdInspect", "Reads talents and glyphs of party members (28 yards) so talent cooldowns show up right away with the correct duration. /rpf inspect forces a refresh.")
     Check(L, "Icon tooltips", "cdTooltips", "Icons catch the mouse when enabled. Shift + right-click an icon to hide that spell.")
-    Check(L, "Arena: PvP trinket first", "cdArenaTrinket")
     L.y = L.y - 4
+    Dropdown(L, "Show spells", "cdPriority", {
+        { 1, "Essential only (trinket, big defensives, interrupts, hard CC)" },
+        { 2, "Essential + useful" },
+        { 3, "Everything in the selected categories" },
+    })
     Dropdown(L, "Position", "cdAnchor", {
         { "RIGHT", "Right of the frame" },
         { "LEFT", "Left of the frame" },
         { "BOTTOM", "Below the frame" },
         { "TOP", "Above the frame" },
     })
+    Slider(L, "Icon size", "cdSize", 12, 40, 1)
 
     local R = Column(p, 300, TOP)
     Header(R, "Categories")
     for _, c in ipairs(ns.CDCategories) do
         Check(R, c.label, "cdCategories." .. c.key)
     end
-    Slider(R, "Icon size", "cdSize", 12, 40, 1)
     Slider(R, "Icons per row", "cdPerRow", 1, 10, 1)
     Slider(R, "Max icons", "cdMax", 1, 16, 1)
     Slider(R, "Spacing", "cdSpacing", 0, 8, 1)
@@ -1284,16 +1320,16 @@ local function BuildClickCast()
         ns:ApplyAllClickBindings()
         ns:RefreshOptions()
     end
-    local dButton = RawDropdown(p, ex, ey - 22, 120, "Mouse button", ns.ClickButtons,
+    local dButton = RawDropdown(p, ex, ey - 22, 150, "Mouse button", ns.ClickButtons,
         function() local b = current() return b and tonumber(b.button) or 1 end,
         function(v) local b = current() if b then b.button = v changed() end end)
-    local dMod = RawDropdown(p, ex + 150, ey - 22, 120, "Modifier", ns.ClickModifiers,
+    local dMod = RawDropdown(p, ex, ey - 74, 150, "Modifier", ns.ClickModifiers,
         function() local b = current() return b and (b.mod or "") or "" end,
         function(v) local b = current() if b then b.mod = v changed() end end)
-    local dType = RawDropdown(p, ex, ey - 74, 120, "Action", ns.ClickTypes,
+    local dType = RawDropdown(p, ex, ey - 126, 150, "Action", ns.ClickTypes,
         function() local b = current() return b and b.type or "target" end,
         function(v) local b = current() if b then b.type = v changed() end end)
-    local valueBox = EditBox(p, ex, ey - 134, 250, "Spell name (exact) or macro text")
+    local valueBox = EditBox(p, ex, ey - 190, 240, "Spell name (exact) or macro text")
     local function saveValue(self)
         local b = current()
         if b then
@@ -1307,8 +1343,8 @@ local function BuildClickCast()
     end
     valueBox:SetScript("OnEnterPressed", saveValue)
     valueBox:SetScript("OnEditFocusLost", saveValue)
-    local conflict = Text(p, ex, ey - 162, 250, "", "GameFontRedSmall", 30)
-    Text(p, ex, ey - 200, PAGE_W - ex - 16,
+    local conflict = Text(p, ex, ey - 216, 250, "", "GameFontRedSmall", 30)
+    Text(p, ex, ey - 250, PAGE_W - ex - 16,
         "Examples:\n|cffffffffCast spell|r - Flash Heal, Rejuvenation, Power Word: Shield\n|cffffffffMacro|r - /cast [@mouseover] Cleanse\n|cffffffffAssist|r targets the unit's target.\n\nUnmodified left/right clicks default to target and the unit menu when no binding exists.",
         "GameFontHighlightSmall", 120)
 
@@ -1334,7 +1370,7 @@ local function BuildClickCast()
         valueBox:SetText(b and b.value or "")
         if b and (b.type == "spell" or b.type == "macro") then valueBox:Show() else valueBox:Hide() end
         conflict:SetText(ns:ClickBindingConflict(selected) and "Another binding uses the same button and modifier." or "")
-        if ns:CliqueActive() and ns.db.clickCast.enabled then
+        if ns:CliqueActive() then
             status:SetText("Clique is loaded and handles the clicks. Uncheck the option above to use these bindings instead.")
         elseif not ns.db.clickCast.enabled then
             status:SetText("Disabled: left-click targets, right-click opens the unit menu.")
@@ -1444,6 +1480,12 @@ local function BuildProfiles()
             ns:RefreshOptions()
         end, "Import", true)
     end)
+
+    local baseDefault = p.default
+    p.default = function()
+        baseDefault()
+        ns:UpdateGroupType(true)
+    end
 
     local R = Column(p, 300, TOP)
     Header(R, "Automatic profiles")

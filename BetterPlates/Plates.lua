@@ -582,8 +582,11 @@ local function Apply(d)
 	d.arrowLeftAnchor, d.arrowRightAnchor = nil, nil
 	d.barR = nil
 	d.healthStr = nil
+	d.hb.glow:Hide()
 	d.glowKey = nil
 	d.nameColorKey = nil
+	d.nameKeyLvl = nil
+	d.targetedFrame.anchorKey = nil
 end
 
 -- "Nur Namen" für Freunde: Balken unsichtbar, Name bleibt
@@ -870,13 +873,13 @@ local function CastUpdate(d)
 	d.castLast = v
 
 	local now = GetTime()
-	if db.castName and not d.castSpell and (not d.castLookupAt or now - d.castLookupAt > 0.25) then
+	if not d.castSpell and (not d.castLookupAt or now - d.castLookupAt > 0.25) then
 		d.castLookupAt = now
 		local name, channel = LookupCast(d)
 		if name then
 			d.castSpell = name
 			if d.castChannel == nil then d.castChannel = channel end
-			c.text:SetText(CastName(name))
+			c.text:SetText(db.castName and CastName(name) or "")
 			if ns.castHide[name] then
 				d.castHidden = true
 				c:Hide()
@@ -888,6 +891,8 @@ local function CastUpdate(d)
 		end
 	end
 	if d.castHidden then return end
+	-- Apply() setzt die Hervorhebung zurück (z. B. Zielwechsel): erneut anwenden
+	if d.castEmph == nil and d.castSpell then CastEmphasis(d, ns.castEmphasis[d.castSpell]) end
 
 	if db.castTimer then
 		local rem = d.castChannel and (v - mn) or (mx - v)
@@ -960,7 +965,9 @@ local function GatherTargeted(now)
 	if now - lastTargeted < 0.25 then return end
 	lastTargeted = now
 	wipe(targetedBy)
-	for k, t in pairs(targetedIdx) do wipe(t) end
+	for k, t in pairs(targetedIdx) do
+		if #t == 0 then targetedIdx[k] = nil else wipe(t) end
+	end
 	wipe(arenaAim)
 	local db = ns.db
 	if not db.targetedBy and not db.enemyTargetIndicator then return end
@@ -968,8 +975,10 @@ local function GatherTargeted(now)
 	if db.targetedBy then
 		if nraid > 0 then
 			for i = 1, nraid do
-				local g = UnitGUID("raid" .. i .. "target")
-				if g then targetedBy[g] = (targetedBy[g] or 0) + 1 end
+				if not UnitIsUnit("raid" .. i, "player") then
+					local g = UnitGUID("raid" .. i .. "target")
+					if g then targetedBy[g] = (targetedBy[g] or 0) + 1 end
+				end
 			end
 		else
 			for i = 1, 4 do
@@ -1228,6 +1237,15 @@ local function CleuCastFrame(d, now)
 		return
 	end
 	UpdateKick(d, true)
+	if d.castEmph == nil then
+		-- Apply() hat Höhe/Hervorhebung zurückgesetzt: wiederherstellen
+		CastEmphasis(d, c.emphasis)
+		CastColors(d, c.channel and 2 or 3)
+	end
+	if d.castCleuDur ~= c.duration then
+		d.castCleuDur = c.duration
+		cast:SetMinMaxValues(0, c.duration)
+	end
 	local elapsed = now - c.start
 	if elapsed > c.duration then elapsed = c.duration end
 	if c.channel then
@@ -1242,6 +1260,7 @@ local function CleuCastStart(d, c, now)
 	local cast = d.cast
 	d.castCleu = c
 	cleuActive[d] = true
+	d.castCleuDur = c.duration
 	cast:SetMinMaxValues(0, c.duration)
 	cast.text:SetText(ns.db.castName and CastName(c.name) or "")
 	if not ns.db.castTimer then cast.time:SetText("") end
@@ -1273,7 +1292,13 @@ local function CleuCastCheck(d, now)
 	local c = ns.Casts.store[d.guid]
 	if c and c.interruptedAt and not db.castInterrupted then c = nil end
 	if c and (c.interruptedAt or now <= c.start + c.duration) then
-		if d.castCleu ~= c then CleuCastStart(d, c, now) end
+		if d.castCleu ~= c then
+			CleuCastStart(d, c, now)
+		elseif d.castEmph == nil and not c.interruptedAt then
+			-- Apply() (Zielwechsel, Größenwechsel) hat Höhe/Hervorhebung zurückgesetzt
+			CastEmphasis(d, c.emphasis)
+			CastColors(d, c.channel and 2 or 3)
+		end
 	elseif d.castCleu then
 		CleuCastStop(d)
 	end
@@ -1345,11 +1370,14 @@ local function UpdateTargeted(d, reaction)
 		tb.text:SetPoint("LEFT", tb, "LEFT", shownSquares * 9, 0)
 		tb.text:SetText(text)
 	end
-	if not tb:IsShown() then
+	local raidShift = (d.parts.raid:IsShown() and db.raidIconPos == 1) and (db.raidIconSize + 4) or 0
+	local anchorKey = raidShift + db.targetedX * 1000 + db.targetedY * 1000000
+	if tb.anchorKey ~= anchorKey then
+		tb.anchorKey = anchorKey
 		tb:ClearAllPoints()
-		tb:SetPoint("LEFT", d.hb, "RIGHT", 4 + (d.parts.raid:IsShown() and db.raidIconPos == 1 and db.raidIconSize + 4 or 0) + db.targetedX, db.targetedY)
-		tb:Show()
+		tb:SetPoint("LEFT", d.hb, "RIGHT", 4 + raidShift + db.targetedX, db.targetedY)
 	end
+	if not tb:IsShown() then tb:Show() end
 end
 
 ----------------------------------------------------------------
@@ -1387,7 +1415,6 @@ local function UpdatePlate(d)
 	local p, db = d.parts, ns.db
 	ReNeutralize(p)
 	local now = GetTime()
-	CleuCastCheck(d, now)
 
 	local name = p.name:GetText()
 	if name ~= d.name then NewUnit(d, name) end
@@ -1395,7 +1422,7 @@ local function UpdatePlate(d)
 	-- Reaktion & Klasse aus der Balkenfarbe
 	local r, g, b = p.hp:GetStatusBarColor()
 	local reaction, class = Classify(r, g, b)
-	if reaction == "HOSTILE" and d.name and (ns.guidByName[d.name] or ns.classCache[d.name]) then
+	if reaction == "HOSTILE" and d.name and not d.totem and (ns.guidByName[d.name] or ns.classCache[d.name]) then
 		reaction = "ENEMY_PLAYER"
 	end
 	d.reaction = reaction
@@ -1427,10 +1454,12 @@ local function UpdatePlate(d)
 	if d.isPlayer and not d.guid and d.name then d.guid = ns.guidByName[d.name] end
 	local isFocus = (d == focusPlate)
 	if isFocus and focusGUID and not d.guid then d.guid = focusGUID end
+	CleuCastCheck(d, now)
 
 	-- Größenfaktoren: Freunde kleiner, Bosse / wichtige Raid-NPCs / Flaggenträger größer
 	local fScaled = (friendlyPlayer and db.friendlyScale < 1 and not d.isTarget) and true or false
-	local raidPrio = d.testRaidPrio or (db.raidNpcHighlight and enemy and d.raidPrio) or nil
+	local raidPrio = d.testRaidPrio or (db.raidNpcHighlight and enemy and d.nameLower and ns.raidNpc and ns.raidNpc[d.nameLower]) or nil
+	d.raidPrio = raidPrio
 	local flag = db.flagCarrier and d.guid and ns.flagCarriers and ns.flagCarriers[d.guid] or nil
 	local isBoss = p.boss:IsShown()
 	local trivial = not d.isPlayer and db.trivialMode > 1 and IsTrivial(p)
@@ -1526,24 +1555,33 @@ local function UpdatePlate(d)
 	SetNameOnly(d, nameOnly)
 	local iconOnly = nameOnly and db.friendlyClassIconOnly and d.class and true or false
 
-	-- Name (+ Level) bzw. Arena-Nummer
+	-- Name (+ Level) bzw. Arena-Nummer. Der Text wird nur neu gebaut, wenn sich
+	-- eine Zutat ändert (spart String-Allokationen in jedem Tick).
 	local arenaNum = db.arenaNumbers and d.name and arenaNums[d.name]
-	local text
-	if arenaNum then
-		text = tostring(arenaNum)
-	elseif iconOnly or db.hideName then
-		text = ""
-	else
-		text = DisplayName(d)
-		if not db.hideLevel and not nameOnly then
-			local lvl = LevelString(d, p, d.isPlayer)
-			if lvl then text = lvl .. " " .. text end
+	local lvlText = p.level:GetText()
+	local lr, lg, lb = p.level:GetTextColor()
+	local castHide = db.hideNameOnCast and d.cast:IsShown() and not arenaNum
+	local lvlKey = (p.boss:IsShown() and 2 or 0) + (p.elite:IsShown() and 1 or 0) + (d.isPlayer and 4 or 0)
+		+ (iconOnly and 8 or 0) + (nameOnly and 16 or 0) + (castHide and 32 or 0) + (arenaNum or 0) * 64
+	if d.nameStr == nil or d.nameKeyLvl ~= lvlKey or d.nameKeyText ~= lvlText or d.nameKeyR ~= lr or d.nameKeyG ~= lg or d.nameKeyB ~= lb then
+		d.nameKeyLvl, d.nameKeyText, d.nameKeyR, d.nameKeyG, d.nameKeyB = lvlKey, lvlText, lr, lg, lb
+		local text
+		if arenaNum then
+			text = tostring(arenaNum)
+		elseif iconOnly or db.hideName then
+			text = ""
+		else
+			text = DisplayName(d)
+			if not db.hideLevel and not nameOnly then
+				local lvl = LevelString(d, p, d.isPlayer)
+				if lvl then text = lvl .. " " .. text end
+			end
 		end
-	end
-	if db.hideNameOnCast and d.cast:IsShown() and not arenaNum then text = "" end
-	if text ~= d.nameStr then
-		d.nameStr = text
-		d.nameText:SetText(text)
+		if castHide then text = "" end
+		if text ~= d.nameStr then
+			d.nameStr = text
+			d.nameText:SetText(text)
+		end
 	end
 	local bigName = (arenaNum and true or false) or (isBoss and db.bossBig)
 	if bigName ~= d.nameBig then
@@ -1864,8 +1902,9 @@ function Plates:RefreshAll()
 		for i = 1, #d.auraIcons do d.auraIcons[i].size = nil end
 		for i = 1, #d.drIcons do d.drIcons[i].size = nil end
 		if visible[f] then
+			if d.castCleu then CleuCastStop(d) end
 			SafeUpdate(d)
-			if d.parts.cb:IsShown() then CastShow(d) else d.cast:Hide() end
+			if d.parts.cb:IsShown() then CastShow(d) end
 		end
 	end
 	if ns.Minimap then ns.Minimap:Update() end

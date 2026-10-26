@@ -101,7 +101,7 @@ ns.defaults = {
     -- auras
     maxDebuffs = 3,
     debuffSize = 17,
-    onlyDispellable = false,
+    debuffFilter = "IMPORTANT",  -- IMPORTANT / DISPELLABLE / ALL
     hideTrivialDebuffs = true,
     dispelHighlight = true,
     dispelIndicators = true,
@@ -116,9 +116,11 @@ ns.defaults = {
     buffSize = 15,
     onlyMyBuffs = true,
     buffMaxDuration = 300,
-    buffWhitelistOnly = false,
+    buffFilter = "IMPORTANT",    -- IMPORTANT / SHORT / WHITELIST
     buffWhitelist = {},
     auraTooltips = false,
+    auraTimers = true,           -- remaining time on buff / debuff icons
+    auraTimerThreshold = 60,     -- show the text only below this many seconds (0 = always)
 
     -- indicators (own HoTs / shields in the frame corners)
     indicators = {
@@ -163,6 +165,7 @@ ns.defaults = {
     cdTooltips = true,
     cdInspect = true,
     cdArenaTrinket = true,      -- in arena: PvP trinket first and larger
+    cdPriority = 2,             -- 1 essential only / 2 essential + useful / 3 everything
     cdHidden = {},              -- [spellId] = true
     customSpells = {},          -- { id=, cd=, class=, cat= }
     cdCategories = {

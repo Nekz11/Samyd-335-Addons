@@ -5,10 +5,10 @@ Every addon has its own in-game options window, so no chat-command fiddling is r
 
 | Addon | Version | What it does | Options |
 |---|---|---|---|
-| [BetterFrames 335](BetterFrames335/) | 2.1.3 | Better default unit frames: class colors, textures & fonts, aura filters & glows, castbar sizing, interrupt tracking, absorb/combat/racial indicators, hide & move UI elements, profiles and presets (inspired by BetterBlizzFrames) | `/bbf` |
-| [BetterPlates](BetterPlates/) | 2.0.0 | Complete nameplate suite: class colors, friend/foe styles, cast bars, auras, DR tracker, threat modes, flag carriers, totem timers, zone rules, profiles and presets (inspired by BetterBlizzPlates) | `/bbp` |
-| [RetailPartyFrames](RetailPartyFrames/) | 2.0.3 | Retail-style party **and raid** frames: in-frame cast bars, party cooldowns, dispel highlighting, HoT indicators, click-casting, profiles with auto switching, presets | `/rpf` |
-| [WArena](WArena/) | 2.0.2 | Full PvP frames package: arena frames with DR, enemy cooldowns, cast bars, indicators, BG enemy list, boss frames, announcements, themes, profiles, presets | `/warena` |
+| [BetterFrames 335](BetterFrames335/) | 2.1.4 | Better default unit frames: class colors, textures & fonts, aura filters & glows, castbar sizing, interrupt tracking, absorb/combat/racial indicators, hide & move UI elements, profiles and presets (inspired by BetterBlizzFrames) | `/bbf` |
+| [BetterPlates](BetterPlates/) | 2.0.2 | Complete nameplate suite: class colors, friend/foe styles, cast bars, auras, DR tracker, threat modes, flag carriers, totem timers, zone rules, profiles and presets (inspired by BetterBlizzPlates) | `/bbp` |
+| [RetailPartyFrames](RetailPartyFrames/) | 2.1.0 | Retail-style party **and raid** frames: in-frame cast bars, party cooldowns, dispel highlighting, HoT indicators, click-casting, profiles with auto switching, presets | `/rpf` |
+| [WArena](WArena/) | 2.0.6 | Full PvP frames package: arena frames with DR, enemy cooldowns, cast bars, indicators, BG enemy list, boss frames, announcements, themes, profiles, presets | `/warena` |
 | [SpellFlash 335](SpellFlash335/) | 2.5 | Flashes an action button when you press its keybind, with several effects, colours and play modes (works with SnowfallKeyPress, Bartender4, Dominos, ElvUI) | `/sf` |
 
 None of these addons contain code from the retail addons that inspired them.

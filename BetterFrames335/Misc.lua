@@ -18,16 +18,18 @@ local function PatternFromGlobal(str)
 end
 
 local systemPatterns, talentPatterns = {}, {}
+local function AddPatterns(list, names)
+    for _, gname in ipairs(names) do
+        local p = PatternFromGlobal(_G[gname])     -- missing globals are simply skipped
+        if p then list[#list + 1] = p end
+    end
+end
+
 local function BuildPatterns()
-    for _, g in ipairs({ ERR_FRIEND_ONLINE_SS, ERR_FRIEND_OFFLINE_S, MARKED_AFK, CLEARED_AFK, MARKED_DND, CLEARED_DND,
-                         MARKED_AFK_MESSAGE, ERR_CHAT_PLAYER_NOT_FOUND_S, ERR_NOT_IN_RAID, ERR_GUILD_PLAYER_NOT_IN_GUILD_S }) do
-        local p = PatternFromGlobal(g)
-        if p then systemPatterns[#systemPatterns + 1] = p end
-    end
-    for _, g in ipairs({ ERR_LEARN_SPELL_S, ERR_LEARN_ABILITY_S, ERR_SPELL_UNLEARNED_S, ERR_LEARN_PASSIVE_S }) do
-        local p = PatternFromGlobal(g)
-        if p then talentPatterns[#talentPatterns + 1] = p end
-    end
+    AddPatterns(systemPatterns, { "ERR_FRIEND_ONLINE_SS", "ERR_FRIEND_OFFLINE_S", "MARKED_AFK", "CLEARED_AFK",
+        "MARKED_DND", "CLEARED_DND", "MARKED_AFK_MESSAGE", "ERR_CHAT_PLAYER_NOT_FOUND_S", "ERR_NOT_IN_RAID",
+        "ERR_GUILD_PLAYER_NOT_IN_GUILD_S" })
+    AddPatterns(talentPatterns, { "ERR_LEARN_SPELL_S", "ERR_LEARN_ABILITY_S", "ERR_SPELL_UNLEARNED_S", "ERR_LEARN_PASSIVE_S" })
 end
 
 local function Matches(list, msg)

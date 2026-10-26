@@ -165,6 +165,7 @@ end
 ns.defaults = {
 	debug = false,
 	migrated202 = false,
+	migrated206 = false,
 	locked = true,
 	point = { "RIGHT", "UIParent", "RIGHT", -260, 120 },
 }
@@ -238,6 +239,12 @@ function ns:ActivateProfile(name, silent)
 		ns.db.indRange = false
 		if (ns.db.rangeAlpha or 1) < 0.6 then ns.db.rangeAlpha = 0.6 end
 		if (ns.db.unseenAlpha or 1) < 0.65 then ns.db.unseenAlpha = 0.65 end
+	end
+	if not ns.db.migrated206 then
+		-- 2.0.x placed cooldown and totem rows below the frame, which needed a lot of vertical room
+		ns.db.migrated206 = true
+		if ns.db.cdPos == "below" then ns.db.cdPos = "right" end
+		if ns.db.totemPos == "below" then ns.db.totemPos = "right" end
 	end
 	if ns.initialized then
 		for _, mod in ipairs(ns.modules) do
@@ -329,6 +336,7 @@ local function UpdateZone()
 	st.instanceType = instanceType
 	st.inArena = instanceType == "arena"
 	st.inBG = instanceType == "pvp"
+	local wasTest = st.testMode or (ns.db and (ns.db.bgTest or ns.db.bossTest))
 	if st.inArena and not wasArena then
 		st.testMode = false
 		st.arenaSize = 0
@@ -337,10 +345,13 @@ local function UpdateZone()
 		ns:Fire("ARENA_LEAVE")
 	end
 	if st.inBG and not wasBG then
+		st.testMode = false
 		ns:Fire("BG_ENTER")
 	elseif wasBG and not st.inBG then
 		ns:Fire("BG_LEAVE")
 	end
+	-- previews (test frames, BG list preview, boss preview, HUD demo) end when the real thing starts
+	if (st.inArena or st.inBG) and wasTest and ns.initialized then ns:Fire("TEST_MODE", false) end
 	ns:Fire("ZONE_CHANGED", instanceType)
 end
 ns.UpdateZone = UpdateZone

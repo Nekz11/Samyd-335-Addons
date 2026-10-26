@@ -8,7 +8,7 @@ local floor, mmax, tsort = math.floor, math.max, table.sort
 local GetTime = GetTime
 
 ns:AddDefaults({
-	totems = true, totemSize = 70, totemPos = "below", totemSpacing = 2, totemMax = 5,
+	totems = true, totemSize = 70, totemPos = "right", totemSpacing = 2, totemMax = 5,
 	totemGrounding = true, totemTremor = true, totemCleansing = true, totemEarthbind = true, totemManaTide = true,
 	totemStoneclaw = true, totemWindfury = false, totemFire = false,
 })
@@ -22,7 +22,7 @@ ns.TotemDB = {
 	{ key = "Earthbind", opt = "totemEarthbind", ids = { 2484 }, dur = 45, prio = 5 },
 	{ key = "Stoneclaw", opt = "totemStoneclaw", ids = { 5730, 6390, 6391, 6392, 10427, 10428, 25525, 58580, 58581, 58582 }, dur = 15, prio = 6 },
 	{ key = "Windfury",  opt = "totemWindfury",  ids = { 8512 }, dur = 300, prio = 7 },
-	{ key = "Fire",      opt = "totemFire",      ids = { 3599, 6363, 6364, 6365, 10437, 10438, 25552, 58699, 58703, 58704, 8190, 10585, 10586, 10587, 25551, 58731, 58734, 58735 }, dur = 300, prio = 8 },
+	{ key = "Fire",      opt = "totemFire",      ids = { 3599, 6363, 6364, 6365, 10437, 10438, 25552, 58699, 58703, 58704, 8190, 10585, 10586, 10587, 25551, 58731, 58734, 58735 }, dur = 60, prio = 8 },
 }
 
 local byName = {}

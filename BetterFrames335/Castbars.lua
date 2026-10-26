@@ -294,14 +294,22 @@ local classInterrupt = {
     DEATHKNIGHT = 47528, HUNTER = 34490, DRUID = 16979, PRIEST = 15487,
 }
 local cds = {}   -- sourceGUID -> { spell = id, ready = time }
+-- the combat log reports the rank actually cast (Kick R5 = 38768 ...): resolve by NAME so every rank matches
+local interruptByName = {}   -- localized name -> { cd = seconds, id = representative spellId }
+local function BuildInterruptNames()
+    for id, cd in pairs(interruptCD) do
+        local name = GetSpellInfo(id)
+        if name then interruptByName[name] = { cd = cd, id = id } end
+    end
+end
 
 -- OnEvent args: frame, "COMBAT_LOG_EVENT_UNFILTERED", timestamp, subevent, sourceGUID, sourceName,
--- sourceFlags, destGUID, destName, destFlags, spellId, ...
-local function LogInterrupt(_, _, _, event, sourceGUID, _, _, _, _, _, spellId)
-    if event ~= "SPELL_CAST_SUCCESS" then return end
-    local cd = interruptCD[spellId]
-    if not cd or not sourceGUID then return end
-    cds[sourceGUID] = { spell = spellId, ready = GetTime() + cd }
+-- sourceFlags, destGUID, destName, destFlags, spellId, spellName, ...
+local function LogInterrupt(_, _, _, event, sourceGUID, _, _, _, _, _, spellId, spellName)
+    if event ~= "SPELL_CAST_SUCCESS" or not sourceGUID then return end
+    local entry = spellName and interruptByName[spellName]
+    if not entry then return end
+    cds[sourceGUID] = { spell = entry.id, ready = GetTime() + entry.cd }
 end
 
 -- returns spellId (icon to show), remaining seconds (0 = ready) for a unit, or nil
@@ -478,12 +486,12 @@ local function HookDefaultBar(key, bar)
     local t = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     t:SetPoint("LEFT", bar, "RIGHT", key == "Player" and 8 or 6, key == "Player" and 1 or 0)
     bar.bbfTimer = t
-    bar:HookScript("OnUpdate", BBF:Guard("Castbar" .. key, BarOnUpdate))
-    bar:HookScript("OnShow", function(self)
+    BBF:HookScriptSafe(bar, "OnUpdate", BBF:Guard("Castbar" .. key, BarOnUpdate))
+    BBF:HookScriptSafe(bar, "OnShow", function(self)
         self.bbfRecolored = nil
         if key ~= "Player" then Detach(self, key) end
     end)
-    bar:HookScript("OnHide", function(self)
+    BBF:HookScriptSafe(bar, "OnHide", function(self)
         if self.bbfInt then self.bbfInt:Hide() end
         if self.bbfHL then self.bbfHL.LEFT:Hide(); self.bbfHL.RIGHT:Hide() end
     end)
@@ -550,6 +558,7 @@ function M:Init()
     end
     ev:SetScript("OnEvent", BBF:Guard("Castbars", OnEvent))
 
+    BuildInterruptNames()
     local log = CreateFrame("Frame")
     log:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
     log:SetScript("OnEvent", BBF:Guard("InterruptLog", LogInterrupt))

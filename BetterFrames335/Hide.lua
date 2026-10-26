@@ -56,10 +56,13 @@ local function ApplyParked()
             if f then
                 if db[key] then
                     if f:GetParent() ~= BBF.hider then
-                        BBF:RunOOC("park_" .. name, function() f:SetParent(BBF.hider) end)
+                        BBF:RunOOC("park_" .. name, function()
+                            f.bbfOrigParent = f:GetParent()      -- e.g. MainMenuBar for the stance / pet bar
+                            f:SetParent(BBF.hider)
+                        end)
                     end
                 elseif f:GetParent() == BBF.hider then
-                    BBF:RunOOC("park_" .. name, function() f:SetParent(UIParent) end)
+                    BBF:RunOOC("park_" .. name, function() f:SetParent(f.bbfOrigParent or UIParent) end)
                 end
             end
         end

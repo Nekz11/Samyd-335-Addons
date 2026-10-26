@@ -3,6 +3,7 @@
 -- cat      = category (see ns.CDCategories)
 -- ids      = every rank / alternative spell id that triggers this cooldown
 -- talent   = only shown after the player has been seen using it
+-- prio     = 1 essential (trinket, big defensives, interrupts, hard CC), 2 useful (default), 3 minor
 -- active   = buff duration, the icon glows while active
 -- race     = racial ability (UnitRace token)
 
@@ -24,7 +25,7 @@ for i, c in ipairs(ns.CDCategories) do CAT_ORDER[c.key] = i end
 
 local DB = {}
 local function add(class, id, cd, cat, opts)
-    local e = { id = id, class = class, cd = cd, cat = cat }
+    local e = { id = id, class = class, cd = cd, cat = cat, prio = 2 }
     if opts then
         for k, v in pairs(opts) do e[k] = v end
     end
@@ -32,172 +33,172 @@ local function add(class, id, cd, cat, opts)
 end
 
 -- WARRIOR
-add("WARRIOR", 6552, 10, "interrupt")                                         -- Pummel
-add("WARRIOR", 72, 12, "interrupt", { ids = { 72, 1671, 1672, 29704 } })      -- Shield Bash
-add("WARRIOR", 871, 300, "defensive", { active = 12 })                        -- Shield Wall
-add("WARRIOR", 12975, 180, "defensive", { talent = true, active = 20 })       -- Last Stand
+add("WARRIOR", 6552, 10, "interrupt", { prio = 1 })                                         -- Pummel
+add("WARRIOR", 72, 12, "interrupt", {  ids = { 72, 1671, 1672, 29704 } , prio = 1 })      -- Shield Bash
+add("WARRIOR", 871, 300, "defensive", {  active = 12 , prio = 1 })                        -- Shield Wall
+add("WARRIOR", 12975, 180, "defensive", {  talent = true, active = 20 , prio = 1 })       -- Last Stand
 add("WARRIOR", 23920, 10, "defensive", { active = 5 })                        -- Spell Reflection
 add("WARRIOR", 55694, 180, "defensive", { active = 10 })                      -- Enraged Regeneration
 add("WARRIOR", 3411, 30, "utility")                                           -- Intervene
-add("WARRIOR", 1161, 180, "utility")                                          -- Challenging Shout
-add("WARRIOR", 5246, 120, "cc")                                               -- Intimidating Shout
+add("WARRIOR", 1161, 180, "utility", { prio = 3 })                                          -- Challenging Shout
+add("WARRIOR", 5246, 120, "cc", { prio = 1 })                                               -- Intimidating Shout
 add("WARRIOR", 46968, 20, "cc", { talent = true })                            -- Shockwave
 add("WARRIOR", 12809, 30, "cc", { talent = true })                            -- Concussion Blow
 add("WARRIOR", 1719, 300, "offensive", { active = 12 })                       -- Recklessness
-add("WARRIOR", 64382, 300, "offensive")                                       -- Shattering Throw
-add("WARRIOR", 46924, 90, "offensive", { talent = true, active = 6 })         -- Bladestorm
+add("WARRIOR", 64382, 300, "offensive", { prio = 1 })                                       -- Shattering Throw
+add("WARRIOR", 46924, 90, "offensive", {  talent = true, active = 6 , prio = 1 })         -- Bladestorm
 add("WARRIOR", 676, 60, "utility")                                            -- Disarm
 add("WARRIOR", 18499, 30, "utility", { active = 10 })                         -- Berserker Rage
 
 -- PALADIN
-add("PALADIN", 642, 300, "defensive", { ids = { 642, 1020 }, active = 12 })   -- Divine Shield
-add("PALADIN", 498, 180, "defensive", { ids = { 498, 5573 }, active = 12 })   -- Divine Protection
-add("PALADIN", 10278, 300, "external", { ids = { 1022, 5599, 10278 }, active = 10 }) -- Hand of Protection
-add("PALADIN", 6940, 120, "external", { active = 12 })                        -- Hand of Sacrifice
-add("PALADIN", 48788, 1200, "external", { ids = { 633, 2800, 10310, 27154, 48788 } }) -- Lay on Hands
-add("PALADIN", 31821, 120, "raid", { talent = true, active = 6 })             -- Aura Mastery
-add("PALADIN", 64205, 120, "raid", { talent = true, active = 10 })            -- Divine Sacrifice
-add("PALADIN", 1044, 25, "utility", { active = 6 })                           -- Hand of Freedom
-add("PALADIN", 1038, 120, "utility", { active = 10 })                         -- Hand of Salvation
-add("PALADIN", 10308, 60, "cc", { ids = { 853, 5588, 5589, 10308 } })         -- Hammer of Justice
-add("PALADIN", 20066, 60, "cc", { talent = true })                            -- Repentance
-add("PALADIN", 31884, 180, "offensive", { active = 20 })                      -- Avenging Wrath
+add("PALADIN", 642, 300, "defensive", {  ids = { 642, 1020 }, active = 12 , prio = 1 })   -- Divine Shield
+add("PALADIN", 498, 180, "defensive", {  ids = { 498, 5573 }, active = 12 , prio = 1 })   -- Divine Protection
+add("PALADIN", 10278, 300, "external", {  ids = { 1022, 5599, 10278 }, active = 10 , prio = 1 }) -- Hand of Protection
+add("PALADIN", 6940, 120, "external", {  active = 12 , prio = 1 })                        -- Hand of Sacrifice
+add("PALADIN", 48788, 1200, "external", {  ids = { 633, 2800, 10310, 27154, 48788 } , prio = 1 }) -- Lay on Hands
+add("PALADIN", 31821, 120, "raid", {  talent = true, active = 6 , prio = 1 })             -- Aura Mastery
+add("PALADIN", 64205, 120, "raid", {  talent = true, active = 10 , prio = 1 })            -- Divine Sacrifice
+add("PALADIN", 1044, 25, "utility", {  active = 6 , prio = 1 })                           -- Hand of Freedom
+add("PALADIN", 1038, 120, "utility", {  active = 10 , prio = 3 })                         -- Hand of Salvation
+add("PALADIN", 10308, 60, "cc", {  ids = { 853, 5588, 5589, 10308 } , prio = 1 })         -- Hammer of Justice
+add("PALADIN", 20066, 60, "cc", {  talent = true , prio = 1 })                            -- Repentance
+add("PALADIN", 31884, 180, "offensive", {  active = 20 , prio = 1 })                      -- Avenging Wrath
 
 -- DEATH KNIGHT
-add("DEATHKNIGHT", 47528, 10, "interrupt")                                    -- Mind Freeze
-add("DEATHKNIGHT", 47476, 120, "interrupt")                                   -- Strangulate
-add("DEATHKNIGHT", 48792, 120, "defensive", { active = 12 })                  -- Icebound Fortitude
-add("DEATHKNIGHT", 48707, 45, "defensive", { active = 5 })                    -- Anti-Magic Shell
+add("DEATHKNIGHT", 47528, 10, "interrupt", { prio = 1 })                                    -- Mind Freeze
+add("DEATHKNIGHT", 47476, 120, "interrupt", { prio = 1 })                                   -- Strangulate
+add("DEATHKNIGHT", 48792, 120, "defensive", {  active = 12 , prio = 1 })                  -- Icebound Fortitude
+add("DEATHKNIGHT", 48707, 45, "defensive", {  active = 5 , prio = 1 })                    -- Anti-Magic Shell
 add("DEATHKNIGHT", 55233, 60, "defensive", { talent = true, active = 10 })    -- Vampiric Blood
 add("DEATHKNIGHT", 49039, 120, "defensive", { talent = true, active = 10 })   -- Lichborne
 add("DEATHKNIGHT", 51271, 60, "defensive", { talent = true, active = 20 })    -- Unbreakable Armor
-add("DEATHKNIGHT", 51052, 120, "raid", { talent = true, active = 10 })        -- Anti-Magic Zone
-add("DEATHKNIGHT", 49016, 180, "offensive", { talent = true, active = 30 })   -- Hysteria
+add("DEATHKNIGHT", 51052, 120, "raid", {  talent = true, active = 10 , prio = 1 })        -- Anti-Magic Zone
+add("DEATHKNIGHT", 49016, 180, "offensive", {  talent = true, active = 30 , prio = 3 })   -- Hysteria
 add("DEATHKNIGHT", 49028, 90, "offensive", { talent = true })                 -- Dancing Rune Weapon
 add("DEATHKNIGHT", 49206, 180, "offensive", { talent = true })                -- Summon Gargoyle
 add("DEATHKNIGHT", 42650, 600, "offensive")                                   -- Army of the Dead
-add("DEATHKNIGHT", 49576, 35, "utility")                                      -- Death Grip
+add("DEATHKNIGHT", 49576, 35, "utility", { prio = 1 })                                      -- Death Grip
 add("DEATHKNIGHT", 48982, 30, "defensive", { talent = true })                 -- Rune Tap
 add("DEATHKNIGHT", 48743, 120, "defensive")                                   -- Death Pact
-add("DEATHKNIGHT", 61999, 600, "raid")                                        -- Raise Ally
+add("DEATHKNIGHT", 61999, 600, "raid", { prio = 3 })                                        -- Raise Ally
 
 -- DRUID
 add("DRUID", 16979, 15, "interrupt", { talent = true })                       -- Feral Charge - Bear
-add("DRUID", 22812, 60, "defensive", { active = 12 })                         -- Barkskin
-add("DRUID", 61336, 180, "defensive", { talent = true, active = 20 })         -- Survival Instincts
+add("DRUID", 22812, 60, "defensive", {  active = 12 , prio = 1 })                         -- Barkskin
+add("DRUID", 61336, 180, "defensive", {  talent = true, active = 20 , prio = 1 })         -- Survival Instincts
 add("DRUID", 22842, 180, "defensive", { active = 10 })                        -- Frenzied Regeneration
-add("DRUID", 48477, 600, "raid", { ids = { 20484, 20739, 20742, 20747, 20748, 26994, 48477 } }) -- Rebirth
+add("DRUID", 48477, 600, "raid", {  ids = { 20484, 20739, 20742, 20747, 20748, 26994, 48477 } , prio = 1 }) -- Rebirth
 add("DRUID", 29166, 180, "raid", { active = 10 })                             -- Innervate
-add("DRUID", 48447, 480, "raid", { ids = { 740, 8918, 9862, 9863, 26983, 48446, 48447 }, active = 8 }) -- Tranquility
+add("DRUID", 48447, 480, "raid", {  ids = { 740, 8918, 9862, 9863, 26983, 48446, 48447 }, active = 8 , prio = 1 }) -- Tranquility
 add("DRUID", 8983, 60, "cc", { ids = { 5211, 6798, 8983 } })                  -- Bash
-add("DRUID", 17116, 180, "utility", { talent = true })                        -- Nature's Swiftness
-add("DRUID", 5209, 180, "utility")                                            -- Challenging Roar
+add("DRUID", 17116, 180, "utility", {  talent = true , prio = 1 })                        -- Nature's Swiftness
+add("DRUID", 5209, 180, "utility", { prio = 3 })                                            -- Challenging Roar
 add("DRUID", 50334, 180, "offensive", { talent = true, active = 15 })         -- Berserk
 add("DRUID", 53201, 90, "offensive", { talent = true, ids = { 48505, 53199, 53200, 53201 } }) -- Starfall
 
 -- HUNTER
-add("HUNTER", 34490, 20, "interrupt", { talent = true })                      -- Silencing Shot
-add("HUNTER", 19263, 90, "defensive", { active = 5 })                         -- Deterrence
+add("HUNTER", 34490, 20, "interrupt", {  talent = true , prio = 1 })                      -- Silencing Shot
+add("HUNTER", 19263, 90, "defensive", {  active = 5 , prio = 1 })                         -- Deterrence
 add("HUNTER", 5384, 30, "defensive")                                          -- Feign Death
-add("HUNTER", 34477, 30, "utility")                                           -- Misdirection
-add("HUNTER", 53271, 60, "utility")                                           -- Master's Call
-add("HUNTER", 23989, 180, "utility", { talent = true })                       -- Readiness
-add("HUNTER", 14311, 30, "cc", { ids = { 1499, 14310, 14311, 60192 } })       -- Freezing Trap / Arrow
-add("HUNTER", 19503, 30, "cc", { talent = true })                             -- Scatter Shot
-add("HUNTER", 3045, 300, "offensive", { active = 15 })                        -- Rapid Fire
-add("HUNTER", 19574, 120, "offensive", { talent = true, active = 18 })        -- Bestial Wrath
-add("HUNTER", 49012, 60, "cc", { talent = true, ids = { 19386, 24132, 24133, 27068, 49011, 49012 } }) -- Wyvern Sting
+add("HUNTER", 34477, 30, "utility", { prio = 3 })                                           -- Misdirection
+add("HUNTER", 53271, 60, "utility", { prio = 1 })                                           -- Master's Call
+add("HUNTER", 23989, 180, "utility", {  talent = true , prio = 1 })                       -- Readiness
+add("HUNTER", 14311, 30, "cc", {  ids = { 1499, 14310, 14311, 60192 } , prio = 1 })       -- Freezing Trap / Arrow
+add("HUNTER", 19503, 30, "cc", {  talent = true , prio = 1 })                             -- Scatter Shot
+add("HUNTER", 3045, 300, "offensive", {  active = 15 , prio = 3 })                        -- Rapid Fire
+add("HUNTER", 19574, 120, "offensive", {  talent = true, active = 18 , prio = 1 })        -- Bestial Wrath
+add("HUNTER", 49012, 60, "cc", {  talent = true, ids = { 19386, 24132, 24133, 27068, 49011, 49012 } , prio = 1 }) -- Wyvern Sting
 add("HUNTER", 19577, 60, "cc", { talent = true })                             -- Intimidation
 
 -- MAGE
-add("MAGE", 2139, 24, "interrupt")                                            -- Counterspell
-add("MAGE", 45438, 300, "defensive", { active = 10 })                         -- Ice Block
+add("MAGE", 2139, 24, "interrupt", { prio = 1 })                                            -- Counterspell
+add("MAGE", 45438, 300, "defensive", {  active = 10 , prio = 1 })                         -- Ice Block
 add("MAGE", 66, 180, "defensive")                                             -- Invisibility
 add("MAGE", 12051, 240, "utility")                                            -- Evocation
-add("MAGE", 11958, 480, "utility", { talent = true })                         -- Cold Snap
-add("MAGE", 44572, 30, "cc", { talent = true })                               -- Deep Freeze
+add("MAGE", 11958, 480, "utility", {  talent = true , prio = 1 })                         -- Cold Snap
+add("MAGE", 44572, 30, "cc", {  talent = true , prio = 1 })                               -- Deep Freeze
 add("MAGE", 42950, 20, "cc", { talent = true, ids = { 31661, 33041, 33042, 33043, 42949, 42950 } }) -- Dragon's Breath
 add("MAGE", 12472, 180, "offensive", { talent = true, active = 20 })          -- Icy Veins
 add("MAGE", 12042, 120, "offensive", { talent = true, active = 15 })          -- Arcane Power
 add("MAGE", 11129, 120, "offensive", { talent = true })                       -- Combustion
-add("MAGE", 55342, 180, "offensive", { active = 30 })                         -- Mirror Image
+add("MAGE", 55342, 180, "offensive", {  active = 30 , prio = 3 })                         -- Mirror Image
 add("MAGE", 42917, 25, "cc", { ids = { 122, 865, 6131, 10230, 27088, 42917 } }) -- Frost Nova
 add("MAGE", 12043, 120, "utility", { talent = true })                         -- Presence of Mind
 
 -- PRIEST
-add("PRIEST", 15487, 45, "interrupt", { talent = true })                      -- Silence
-add("PRIEST", 33206, 180, "external", { talent = true, active = 8 })          -- Pain Suppression
-add("PRIEST", 47788, 180, "external", { talent = true, active = 10 })         -- Guardian Spirit
-add("PRIEST", 47585, 120, "defensive", { talent = true, active = 6 })         -- Dispersion
+add("PRIEST", 15487, 45, "interrupt", {  talent = true , prio = 1 })                      -- Silence
+add("PRIEST", 33206, 180, "external", {  talent = true, active = 8 , prio = 1 })          -- Pain Suppression
+add("PRIEST", 47788, 180, "external", {  talent = true, active = 10 , prio = 1 })         -- Guardian Spirit
+add("PRIEST", 47585, 120, "defensive", {  talent = true, active = 6 , prio = 1 })         -- Dispersion
 add("PRIEST", 48173, 120, "defensive", { talent = true, ids = { 19236, 19238, 19240, 19241, 19242, 19243, 25437, 48172, 48173 } }) -- Desperate Prayer
-add("PRIEST", 64843, 480, "raid", { active = 8 })                             -- Divine Hymn
+add("PRIEST", 64843, 480, "raid", {  active = 8 , prio = 1 })                             -- Divine Hymn
 add("PRIEST", 64901, 360, "raid", { active = 8 })                             -- Hymn of Hope
 add("PRIEST", 6346, 180, "utility")                                           -- Fear Ward
-add("PRIEST", 34433, 300, "utility")                                          -- Shadowfiend
-add("PRIEST", 10890, 30, "cc", { ids = { 8122, 8124, 10888, 10890 } })        -- Psychic Scream
-add("PRIEST", 64044, 120, "cc", { talent = true })                            -- Psychic Horror
+add("PRIEST", 34433, 300, "utility", { prio = 3 })                                          -- Shadowfiend
+add("PRIEST", 10890, 30, "cc", {  ids = { 8122, 8124, 10888, 10890 } , prio = 1 })        -- Psychic Scream
+add("PRIEST", 64044, 120, "cc", {  talent = true , prio = 1 })                            -- Psychic Horror
 add("PRIEST", 10060, 120, "offensive", { talent = true, active = 15 })        -- Power Infusion
-add("PRIEST", 14751, 180, "utility", { talent = true })                       -- Inner Focus
+add("PRIEST", 14751, 180, "utility", {  talent = true , prio = 3 })                       -- Inner Focus
 
 -- ROGUE
-add("ROGUE", 1766, 10, "interrupt", { ids = { 1766, 1767, 1768, 1769, 38768 } }) -- Kick
-add("ROGUE", 31224, 90, "defensive", { active = 5 })                          -- Cloak of Shadows
-add("ROGUE", 26669, 180, "defensive", { ids = { 5277, 26669 }, active = 15 }) -- Evasion
-add("ROGUE", 26889, 180, "defensive", { ids = { 1856, 1857, 26889 } })        -- Vanish
-add("ROGUE", 57934, 30, "utility")                                            -- Tricks of the Trade
-add("ROGUE", 14185, 480, "utility", { talent = true })                        -- Preparation
-add("ROGUE", 2094, 180, "cc")                                                 -- Blind
+add("ROGUE", 1766, 10, "interrupt", {  ids = { 1766, 1767, 1768, 1769, 38768 } , prio = 1 }) -- Kick
+add("ROGUE", 31224, 90, "defensive", {  active = 5 , prio = 1 })                          -- Cloak of Shadows
+add("ROGUE", 26669, 180, "defensive", {  ids = { 5277, 26669 }, active = 15 , prio = 1 }) -- Evasion
+add("ROGUE", 26889, 180, "defensive", {  ids = { 1856, 1857, 26889 } , prio = 1 })        -- Vanish
+add("ROGUE", 57934, 30, "utility", { prio = 3 })                                            -- Tricks of the Trade
+add("ROGUE", 14185, 480, "utility", {  talent = true , prio = 1 })                        -- Preparation
+add("ROGUE", 2094, 180, "cc", { prio = 1 })                                                 -- Blind
 add("ROGUE", 8643, 20, "cc", { ids = { 408, 8643 } })                         -- Kidney Shot
-add("ROGUE", 13750, 180, "offensive", { talent = true, active = 15 })         -- Adrenaline Rush
+add("ROGUE", 13750, 180, "offensive", {  talent = true, active = 15 , prio = 1 })         -- Adrenaline Rush
 add("ROGUE", 51690, 120, "offensive", { talent = true })                      -- Killing Spree
 add("ROGUE", 36554, 30, "utility", { talent = true })                         -- Shadowstep
-add("ROGUE", 51722, 60, "utility")                                            -- Dismantle
+add("ROGUE", 51722, 60, "utility", { prio = 1 })                                            -- Dismantle
 add("ROGUE", 11305, 180, "utility", { ids = { 2983, 8696, 11305 } })          -- Sprint
-add("ROGUE", 1776, 10, "cc")                                                  -- Gouge
+add("ROGUE", 1776, 10, "cc", { prio = 3 })                                                  -- Gouge
 
 -- SHAMAN
-add("SHAMAN", 57994, 6, "interrupt")                                          -- Wind Shear
-add("SHAMAN", 30823, 60, "defensive", { talent = true, active = 15 })         -- Shamanistic Rage
-add("SHAMAN", 2825, 300, "raid", { active = 40 })                             -- Bloodlust
-add("SHAMAN", 32182, 300, "raid", { active = 40 })                            -- Heroism
+add("SHAMAN", 57994, 6, "interrupt", { prio = 1 })                                          -- Wind Shear
+add("SHAMAN", 30823, 60, "defensive", {  talent = true, active = 15 , prio = 1 })         -- Shamanistic Rage
+add("SHAMAN", 2825, 300, "raid", {  active = 40 , prio = 1 })                             -- Bloodlust
+add("SHAMAN", 32182, 300, "raid", {  active = 40 , prio = 1 })                            -- Heroism
 add("SHAMAN", 16190, 300, "raid", { talent = true, active = 12 })             -- Mana Tide Totem
 add("SHAMAN", 21169, 1800, "raid", { ids = { 20608, 21169 } })                 -- Reincarnation (30 min base, talent -15)
-add("SHAMAN", 16188, 180, "utility", { talent = true })                       -- Nature's Swiftness
-add("SHAMAN", 8177, 15, "utility")                                            -- Grounding Totem
-add("SHAMAN", 51514, 45, "cc")                                                -- Hex
+add("SHAMAN", 16188, 180, "utility", {  talent = true , prio = 1 })                       -- Nature's Swiftness
+add("SHAMAN", 8177, 15, "utility", { prio = 1 })                                            -- Grounding Totem
+add("SHAMAN", 51514, 45, "cc", { prio = 1 })                                                -- Hex
 add("SHAMAN", 59159, 45, "cc", { talent = true, ids = { 51490, 59156, 59158, 59159 } }) -- Thunderstorm
 add("SHAMAN", 2894, 600, "offensive")                                         -- Fire Elemental Totem
 add("SHAMAN", 51533, 180, "offensive", { talent = true })                     -- Feral Spirit
 
 -- WARLOCK
-add("WARLOCK", 19647, 24, "interrupt", { ids = { 19244, 19647 }, usage = true }) -- Spell Lock (Felhunter)
+add("WARLOCK", 19647, 24, "interrupt", {  ids = { 19244, 19647 }, usage = true , prio = 1 }) -- Spell Lock (Felhunter)
 add("WARLOCK", 47883, 900, "raid", { ids = { 20707, 20762, 20763, 20764, 20765, 27239, 47883 } }) -- Soulstone
-add("WARLOCK", 47860, 120, "cc", { ids = { 6789, 17925, 17926, 27223, 47859, 47860 } }) -- Death Coil
-add("WARLOCK", 17928, 40, "cc", { ids = { 5484, 17928 } })                   -- Howl of Terror
-add("WARLOCK", 47847, 20, "cc", { talent = true, ids = { 30283, 30413, 30414, 47846, 47847 } }) -- Shadowfury
+add("WARLOCK", 47860, 120, "cc", {  ids = { 6789, 17925, 17926, 27223, 47859, 47860 } , prio = 1 }) -- Death Coil
+add("WARLOCK", 17928, 40, "cc", {  ids = { 5484, 17928 } , prio = 1 })                   -- Howl of Terror
+add("WARLOCK", 47847, 20, "cc", {  talent = true, ids = { 30283, 30413, 30414, 47846, 47847 } , prio = 1 }) -- Shadowfury
 add("WARLOCK", 48020, 30, "utility", { talent = true })                       -- Demonic Circle: Teleport
 add("WARLOCK", 47241, 180, "offensive", { talent = true, active = 30 })       -- Metamorphosis
-add("WARLOCK", 47891, 30, "defensive", { ids = { 6229, 11739, 11740, 28610, 47890, 47891 }, active = 30 }) -- Shadow Ward
-add("WARLOCK", 18708, 180, "utility", { talent = true })                      -- Fel Domination
+add("WARLOCK", 47891, 30, "defensive", {  ids = { 6229, 11739, 11740, 28610, 47890, 47891 }, active = 30 , prio = 3 }) -- Shadow Ward
+add("WARLOCK", 18708, 180, "utility", {  talent = true , prio = 3 })                      -- Fel Domination
 
 -- RACIALS
-add("RACIAL", 59752, 120, "racial", { race = "Human" })                       -- Every Man for Himself
-add("RACIAL", 7744, 120, "racial", { race = "Scourge" })                      -- Will of the Forsaken
+add("RACIAL", 59752, 120, "racial", {  race = "Human" , prio = 1 })                       -- Every Man for Himself
+add("RACIAL", 7744, 120, "racial", {  race = "Scourge" , prio = 1 })                      -- Will of the Forsaken
 add("RACIAL", 20594, 120, "racial", { race = "Dwarf", active = 8 })           -- Stoneform
-add("RACIAL", 20589, 105, "racial", { race = "Gnome" })                       -- Escape Artist (1:45)
+add("RACIAL", 20589, 105, "racial", {  race = "Gnome" , prio = 1 })                       -- Escape Artist (1:45)
 add("RACIAL", 58984, 120, "racial", { race = "NightElf" })                    -- Shadowmeld
 add("RACIAL", 20549, 120, "racial", { race = "Tauren" })                      -- War Stomp
-add("RACIAL", 59547, 180, "racial", { race = "Draenei", ids = { 28880, 59542, 59543, 59544, 59545, 59547, 59548 } }) -- Gift of the Naaru
-add("RACIAL", 20572, 120, "racial", { race = "Orc", ids = { 20572, 33697, 33702 } }) -- Blood Fury
-add("RACIAL", 26297, 180, "racial", { race = "Troll" })                       -- Berserking
+add("RACIAL", 59547, 180, "racial", {  race = "Draenei", ids = { 28880, 59542, 59543, 59544, 59545, 59547, 59548 } , prio = 3 }) -- Gift of the Naaru
+add("RACIAL", 20572, 120, "racial", {  race = "Orc", ids = { 20572, 33697, 33702 } , prio = 3 }) -- Blood Fury
+add("RACIAL", 26297, 180, "racial", {  race = "Troll" , prio = 3 })                       -- Berserking
 add("RACIAL", 28730, 120, "racial", { race = "BloodElf", ids = { 28730, 25046, 50613 } }) -- Arcane Torrent
 
 -- ANY CLASS
-add("ANY", 42292, 120, "pvp", { usage = true })                               -- PvP Trinket
+add("ANY", 42292, 120, "pvp", {  usage = true , prio = 1 })                               -- PvP Trinket
 
 -- Spells that reset other cooldowns
 ns.SpellResets = {
-    [11958] = { 45438, 12472, 44572 },                                         -- Cold Snap
+    [11958] = { 45438, 12472, 44572, 42917 },                                         -- Cold Snap
     [14185] = { 26669, 26889, 36554, 11305 },                                  -- Preparation
     [23989] = { 19263, 34477, 5384, 34490, 53271, 14311, 19503, 3045, 49012, 19577 }, -- Readiness
 }
@@ -312,6 +313,60 @@ ns.FlagAuras = {
 }
 
 ------------------------------------------------------------------------
+-- Important auras for the "important only" aura filters. One id per spell; the lists are
+-- matched by spell NAME at runtime, so every rank is covered.
+------------------------------------------------------------------------
+ns.ImportantDebuffIds = {
+    -- crowd control: incapacitates / fears / polymorphs
+    118, 28271, 28272, 61305, 61721, 61780,   -- Polymorph (+ pig/turtle/rabbit/cat/turkey)
+    5782, 8122, 5484, 6789, 5246, 1513, 10326, -- Fear, Psychic Scream, Howl of Terror, Death Coil, Intimidating Shout, Scare Beast, Turn Evil
+    51514, 33786, 3355, 60210, 19386, 6770, 2094, 1776, 20066, 6358, 605, 2637, 710, 9484, 19503, 31661, 64044,
+    -- Hex, Cyclone, Freezing Trap, Freezing Arrow, Wyvern Sting, Sap, Blind, Gouge, Repentance, Seduction, Mind Control, Hibernate, Banish, Shackle, Scatter Shot, Dragon's Breath, Psychic Horror
+    -- stuns
+    408, 1833, 853, 5211, 9005, 22570, 12809, 7922, 20253, 46968, 44572, 12355, 20549, 30283, 19577, 47481, 49203, 2812, 5530, 12798,
+    -- silences
+    15487, 1330, 18425, 18498, 19244, 18469, 47476, 28730, 34490,
+    -- roots
+    122, 339, 19185, 12494, 45524, 33395,
+    -- disarms
+    676, 51722,
+    -- healing reduction / dispel traps / mana drain
+    12294, 13218, 19434, 56112, 48301, 30108, 34914, 3034,
+}
+ns.ImportantBuffIds = {
+    -- externals and shields
+    33206, 47788, 17, 10278, 6940, 1044, 1038, 6346, 10060, 29166, 64205, 31821, 23920,
+    -- Pain Suppression, Guardian Spirit, PW:S, Hand of Protection, Hand of Sacrifice, Hand of Freedom, Hand of Salvation, Fear Ward, Power Infusion, Innervate, Divine Sacrifice, Aura Mastery, Spell Reflection
+    -- heals over time
+    139, 774, 8936, 33763, 48438, 61295, 7001, 65081, 2893, 552,
+    -- Renew, Rejuvenation, Regrowth, Lifebloom, Wild Growth, Riptide, Lightwell Renew, Body and Soul, Abolish Poison, Abolish Disease
+    -- personal defensives / immunities
+    642, 498, 45438, 19263, 5277, 31224, 22812, 871, 12975, 48707, 48792, 47585, 55694, 46924, 22842, 61336, 16689, 8178, 30823, 7744, 16188,
+    -- Divine Shield, Divine Protection, Ice Block, Deterrence, Evasion, Cloak of Shadows, Barkskin, Shield Wall, Last Stand, AMS, IBF, Dispersion, Enraged Regeneration, Bladestorm, Frenzied Regeneration, Survival Instincts, Nature's Grasp, Grounding Totem Effect, Shamanistic Rage, Will of the Forsaken, Nature's Swiftness
+    -- big offensive cooldowns (useful to see on a team mate in arena)
+    2825, 32182, 12472, 12042, 31884, 1719, 12292, 19574, 50334, 47241, 13750, 51713, 51690, 49016,
+    -- Bloodlust, Heroism, Icy Veins, Arcane Power, Avenging Wrath, Recklessness, Death Wish, Bestial Wrath, Berserk, Metamorphosis, Adrenaline Rush, Shadow Dance, Killing Spree, Hysteria
+}
+
+local importantDebuffNames, importantBuffNames
+local function ResolveNames(ids)
+    local names = {}
+    for _, id in ipairs(ids) do
+        local name = GetSpellInfo(id)
+        if name then names[name] = true end
+    end
+    return names
+end
+function ns:ImportantDebuffNames()
+    if not importantDebuffNames then importantDebuffNames = ResolveNames(self.ImportantDebuffIds) end
+    return importantDebuffNames
+end
+function ns:ImportantBuffNames()
+    if not importantBuffNames then importantBuffNames = ResolveNames(self.ImportantBuffIds) end
+    return importantBuffNames
+end
+
+------------------------------------------------------------------------
 -- Indexes (rebuilt whenever custom spells change)
 ------------------------------------------------------------------------
 ns.SpellDB = DB
@@ -342,7 +397,7 @@ function ns:RebuildSpellIndex()
                     e.custom = true
                 else
                     local class = cs.class or "ANY"
-                    e = { id = id, cd = cd, class = class, cat = (cs.cat and CAT_ORDER[cs.cat]) and cs.cat or "utility", custom = true }
+                    e = { id = id, cd = cd, class = class, cat = (cs.cat and CAT_ORDER[cs.cat]) and cs.cat or "utility", custom = true, prio = 1 }
                     entries[#entries + 1] = e
                     index[id] = e
                 end
@@ -360,6 +415,7 @@ function ns:RebuildSpellIndex()
     end
     for _, list in pairs(byClass) do
         table.sort(list, function(a, b)
+            if a.prio ~= b.prio then return a.prio < b.prio end
             if a.order ~= b.order then return a.order < b.order end
             if a.cd ~= b.cd then return a.cd < b.cd end
             return a.id < b.id

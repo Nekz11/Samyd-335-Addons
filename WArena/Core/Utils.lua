@@ -99,7 +99,9 @@ function ns:SetFont(fs, size, flags, fontName)
 	size = mmax(6, floor((size or 11) + 0.5))
 	flags = flags or ns:FontFlags()
 	local path = ns:Media("font", fontName or (ns.db and ns.db.font) or "Friz Quadrata")
-	if not fs:SetFont(path, size, flags) then
+	fs:SetFont(path, size, flags)
+	local applied = fs:GetFont()
+	if not applied or applied:lower() ~= path:lower() then
 		fs:SetFont(ns.FONTS[1][2], size, flags)
 	end
 	local shadow = ns.db and ns.db.fontShadow
