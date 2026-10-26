@@ -1,0 +1,23 @@
+<Bindings>
+	<Binding name="WARENA_OPTIONS" header="WARENA">
+		WArena_ToggleOptions()
+	</Binding>
+	<Binding name="WARENA_TEST">
+		WArena_ToggleTest()
+	</Binding>
+	<Binding name="WARENA_LOCK">
+		WArena_ToggleLock()
+	</Binding>
+	<Binding name="CLICK WArenaBindTarget1:LeftButton" />
+	<Binding name="CLICK WArenaBindTarget2:LeftButton" />
+	<Binding name="CLICK WArenaBindTarget3:LeftButton" />
+	<Binding name="CLICK WArenaBindTarget4:LeftButton" />
+	<Binding name="CLICK WArenaBindTarget5:LeftButton" />
+	<Binding name="CLICK WArenaBindFocus1:LeftButton" />
+	<Binding name="CLICK WArenaBindFocus2:LeftButton" />
+	<Binding name="CLICK WArenaBindFocus3:LeftButton" />
+	<Binding name="CLICK WArenaBindFocus4:LeftButton" />
+	<Binding name="CLICK WArenaBindFocus5:LeftButton" />
+	<Binding name="CLICK WArenaBindTargetHealer:LeftButton" />
+	<Binding name="CLICK WArenaBindFocusHealer:LeftButton" />
+</Bindings>

@@ -1,0 +1,29 @@
+## Interface: 30300
+## Title: WArena |cff33ff99(3.3.5)|r
+## Notes: PvP frames for WotLK 3.3.5a: arena enemy frames with DR, cooldowns, cast bars and indicators, battleground enemy list, boss frames, announcements, themes and profiles
+## Version: 2.0.1
+## Author: Samyd (Blackrock)
+## SavedVariables: WArenaDB
+
+Locales\enUS.lua
+Core\Init.lua
+Core\Utils.lua
+Data\Spells.lua
+Data\Cooldowns.lua
+Modules\Frames.lua
+Modules\DR.lua
+Modules\Cooldowns.lua
+Modules\Indicators.lua
+Modules\AuraRow.lua
+Modules\Totems.lua
+Modules\Announce.lua
+Modules\HUD.lua
+Modules\Boss.lua
+Modules\Battleground.lua
+Modules\Themes.lua
+Modules\Profiles.lua
+Modules\Minimap.lua
+Modules\History.lua
+Modules\Nameplates.lua
+Options\Widgets.lua
+Options\Panels.lua

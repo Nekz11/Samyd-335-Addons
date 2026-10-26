@@ -1,0 +1,28 @@
+WArena – changelog
+==================
+
+2.0.1
+- Presets: PvP – Arena, PvP – Battleground, PvE – Raid (Themes & Presets page, /warena preset arena|bg|raid)
+
+2.0.0
+- Complete rebuild as a modular addon (Core, Data, Modules, Options)
+- Enemy pet lines, mirror/horizontal layouts, healer first/last/off
+- Enemy cooldown tracker with 150+ abilities, reset spells, active glow
+- Aura row, drink/stealth/low health indicators, targeting-you marker, party targets, enemy target text,
+  range fade
+- Announcements with per-event channel and sound, screen alert frame
+- Arena HUD: preparation countdown, match timer, Shadow Sight timer
+- Battleground enemy list with click-to-target, health tracking, flag carrier
+- Boss frames for dungeons/raids
+- Themes (Classic, Modern, Minimal, Gladius, Glass), color pickers, border styles, own bar textures
+- Profiles per character, import/export strings
+- Match history and spec memory
+- Minimap button, key bindings (target/focus arena 1-5, enemy healer, options, test, lock)
+- Will of the Forsaken triggers the 45 s trinket cooldown
+- 10 DR categories (disarm added), more spell ranks and spec signatures
+
+1.3.2 – Interface panel fits the 420 px Blizzard area
+1.3.0 – Support/donation section, About tab
+1.2.x – Standalone options window, load-order and font fixes
+1.1.0 – Interface options panel
+1.0.0 – Arena frames with trinket, racial, DR, cast bar, spec detection, healer last

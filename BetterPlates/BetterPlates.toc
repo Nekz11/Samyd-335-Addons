@@ -1,0 +1,19 @@
+## Interface: 30300
+## Title: |cff33ccffBetter|rPlates
+## Notes: Enhanced Blizzard nameplates for WotLK 3.3.5a (Warmane), inspired by BetterBlizzPlates. Options: /bbp
+## Author: Samyd (Blackrock)
+## Version: 2.0.0
+## SavedVariables: BetterPlatesDB
+
+Locale.lua
+Core.lua
+Profiles.lua
+Data.lua
+GameData.lua
+Auras.lua
+DR.lua
+Plates.lua
+Widgets.lua
+Options.lua
+Minimap.lua
+Bindings.xml

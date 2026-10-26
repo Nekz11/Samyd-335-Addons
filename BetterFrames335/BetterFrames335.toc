@@ -1,0 +1,15 @@
+## Interface: 30300
+## Title: |cff00ccffBetterFrames|r 3.3.5
+## Notes: Better default Blizzard unit frames for 3.3.5a: class colors, dark mode, aura filters & glows, party castbars, combat/absorb indicators, hide UI clutter. Type /bbf
+## Version: 2.1.1
+## SavedVariables: BetterFrames335DB
+
+Core.lua
+Frames.lua
+Hide.lua
+Auras.lua
+Castbars.lua
+Indicators.lua
+Misc.lua
+Move.lua
+Options.lua

@@ -1,0 +1,11 @@
+<Bindings>
+    <Binding name="RPF_TOGGLE_OPTIONS" header="RETAILPARTYFRAMES">
+        RetailPartyFrames:OpenOptions()
+    </Binding>
+    <Binding name="RPF_TOGGLE_TEST">
+        RetailPartyFrames:CycleTestMode()
+    </Binding>
+    <Binding name="RPF_TOGGLE_LOCK">
+        RetailPartyFrames:ToggleLock()
+    </Binding>
+</Bindings>

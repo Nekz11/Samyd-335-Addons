@@ -1,0 +1,8 @@
+## Interface: 30300
+## Title: SpellFlash |cff66ccff335|r
+## Notes: Flashes an action button when you press its keybind (works with SnowfallKeyPress, Bartender4, Dominos, ElvUI).
+## Version: 2.5
+## SavedVariables: SpellFlash335Settings
+
+Core.lua
+Options.lua

@@ -1,0 +1,33 @@
+BetterPlates - Changelog
+
+2.0.0
+- Quick-setup presets "PvP Arena" and "PvE Raid" (settings + zone rules + cast lists)
+- Profiles (per character), zone rules (Open World / Dungeon / Raid / BG / Arena), import/export
+- New settings window: 16 pages, search box, color pickers, dropdowns, scrollable pages
+- Style: border styles, backgrounds, custom texture/font paths, name in bar, abbreviations,
+  realm strip, level colors, raid icon position, target glow, dim non-targets, presets
+- Positions page: X/Y offsets for every element
+- Friend & foe: only group members, low-health flash, trivial NPC handling, critters, Murloc mode
+- Cast bar: icon side, timer formats, name length, cooldown seconds on interrupt icon, sounds
+- Auras: my HoTs/buffs on friends, dispellable debuffs on group, key auras, rows, grow
+  direction, spacing, stacks, categories, pandemic coloring, only on target
+- Diminishing returns tracker (15 WotLK categories) with icons and reset timers
+- Raid: threat modes (DPS/Healer, Tank), threat percent, 140+ important adds highlighted,
+  boss plates bigger, custom raid NPC list
+- PvP: flag carrier highlight, targeted-by counter, arena "targets YOU" indicator,
+  PvP trinket timer, healer priority dimming
+- Totem timers, minimap button, new key bindings (all nameplates, test mode)
+- Test mode extended (DR, trinket, flag, raid glow)
+
+1.5.0
+- Friend & Foe page: green border, friendly scale, names only in BG/arena, name colors
+- Emphasized casts, hidden casts, "Interrupted by" flash, interrupt lockout aura
+- Bar color by crowd control, NPC hide/fade/color lists, health text formats, /bbp test
+
+1.4.0
+- Focus indicator, party pointer, interrupt icon, NPC/pet list, aura white/blacklist,
+  Blizzard CVar page, key bindings, friendly class-icon-only
+
+1.0 - 1.3
+- Initial release: own bars, class colors, stacking, totems, class icons, healer marker,
+  arena numbers, execute, cast bars on all plates, auras, options window, donate button
